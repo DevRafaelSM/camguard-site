@@ -1,3 +1,5 @@
+Para contexto completo do projeto (identidade visual, decisões de arquitetura, status atual), leia CLAUDE.md na raiz deste repositório antes de qualquer trabalho.
+
 ## Development
 
 When starting the dev server, use background mode:
