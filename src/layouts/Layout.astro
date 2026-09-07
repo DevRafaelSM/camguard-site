@@ -1,0 +1,71 @@
+---
+import "../styles/tokens.css";
+import "../styles/global.css";
+import Intro from "../components/Intro.astro";
+import Companion from "../components/Companion.astro";
+
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+
+const navLinks = [
+  { href: "/", label: "Início" },
+  { href: "/como-funciona", label: "Como funciona" },
+  { href: "/baixar", label: "Baixar" },
+  { href: "/privacidade", label: "Privacidade e segurança" },
+  { href: "/sobre", label: "Sobre" },
+];
+
+const currentPath =
+  Astro.url.pathname !== "/" ? Astro.url.pathname.replace(/\/$/, "") : "/";
+---
+
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title} · CamGuard Hub</title>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/">
+        <span class="brand-mark">CAMGUARD</span>
+        <span class="brand-sub">HUB</span>
+      </a>
+      <nav class="site-nav">
+        {
+          navLinks.map((link) => (
+            <a
+              href={link.href}
+              aria-current={currentPath === link.href ? "page" : undefined}
+            >
+              {link.label}
+            </a>
+          ))
+        }
+      </nav>
+    </header>
+
+    <main>
+      <slot />
+    </main>
+
+    <footer class="site-footer">
+      <div class="tagline">
+        <span>PRIVATE BY DESIGN</span>
+        <span class="dot">·</span>
+        <span>FREE TO USE</span>
+      </div>
+      <p class="copy">
+        &copy; {new Date().getFullYear()} CamGuard Hub. Código aberto.
+      </p>
+    </footer>
+
+    <Companion path={currentPath} />
+    <Intro />
+  </body>
+</html>

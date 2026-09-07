@@ -1,0 +1,36 @@
+/* Design tokens extraídos do CamGuard Hub (apps/hub/assets/theme.env). */
+
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap");
+
+:root {
+  /* Cores */
+  --bg-window: #111126;
+  --bg-sidebar: #17162e;
+  --bg-card: #1b1933;
+  --bg-titlebar: #090812;
+  --bg-input: #18162f;
+
+  --accent: #fb8c62;
+  --accent-soft: #ffad7e;
+  --alert: #e35b4f;
+  --warning: #d9935f;
+  --info: #7e74c8;
+
+  --text-primary: #f3ddd1;
+  --text-secondary: #d2b5b3;
+  --text-tertiary: #b89aa3;
+  --text-muted: #a58b99;
+  --text-faint: #806e82;
+
+  /* Gradiente de marca - coral -> violeta. Sempre via var(), nunca hardcoded. */
+  --gradient-brand: linear-gradient(135deg, var(--accent), var(--info));
+
+  /* Tipografia */
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  /* Raios */
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 9px;
+}

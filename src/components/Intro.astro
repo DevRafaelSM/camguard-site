@@ -1,0 +1,255 @@
+---
+// Boot screen replicada do Hub (apps/hub/lib/screens/loading_screen.dart):
+// mesmo fundo, mesma tipografia, mesmos 4 textos de passo, mesmas taglines.
+// Toca uma vez por sessão do navegador (sessionStorage) e some com fade.
+const STEPS = [
+  "CONECTANDO AO HUB LOCAL",
+  "CARREGANDO CÂMERAS E EVENTOS",
+  "CARREGANDO INTEGRAÇÕES",
+  "PREPARANDO INTERFACE",
+];
+---
+
+<div id="camguard-intro" class="intro-overlay">
+  <div class="intro-bg" style="background-image: url('/images/loading-screen-image.png')">
+  </div>
+  <div class="intro-scrim"></div>
+
+  <div class="intro-center">
+    <p class="intro-eyebrow">PRIVATE SECURITY HUB</p>
+    <h1 class="intro-brand">CAMGUARD</h1>
+    <div class="intro-divider"></div>
+  </div>
+
+  <div class="intro-footer">
+    <div class="intro-taglines">
+      <span>PRIVATE BY DESIGN</span>
+      <span>FREE TO USE</span>
+    </div>
+
+    <div class="intro-progress">
+      <div class="intro-progress-row">
+        <span class="intro-step-label">
+          <i class="intro-dot"></i>
+          <span id="intro-step-text">{STEPS[0]}</span>
+        </span>
+        <span id="intro-percent">0%</span>
+      </div>
+      <div class="intro-bar-track">
+        <div id="intro-bar-fill" class="intro-bar-fill"></div>
+      </div>
+      <div class="intro-segments" id="intro-segments">
+        {STEPS.map(() => <div class="seg" />)}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script is:inline define:vars={{ STEPS }}>
+  (function () {
+    var KEY = "camguardIntroPlayed";
+    var overlay = document.getElementById("camguard-intro");
+    if (!overlay) return;
+
+    if (sessionStorage.getItem(KEY)) {
+      overlay.remove();
+      return;
+    }
+
+    document.body.style.overflow = "hidden";
+
+    var stepText = document.getElementById("intro-step-text");
+    var percentText = document.getElementById("intro-percent");
+    var barFill = document.getElementById("intro-bar-fill");
+    var segments = overlay.querySelectorAll("#intro-segments .seg");
+
+    var STEP_DURATION = 900; // ms - dentro da faixa ~800-1000ms pedida
+    var current = 0;
+
+    function setProgress(index) {
+      var pct = Math.round((index / STEPS.length) * 100);
+      barFill.style.width = pct + "%";
+      percentText.textContent = pct + "%";
+      if (index < STEPS.length) {
+        stepText.textContent = STEPS[index];
+      }
+      segments.forEach(function (seg, i) {
+        seg.classList.toggle("done", i < index);
+      });
+    }
+
+    function advance() {
+      current++;
+      setProgress(current);
+      if (current < STEPS.length) {
+        window.setTimeout(advance, STEP_DURATION);
+      } else {
+        // Fim do carregamento, ainda atrás do overlay (opacity 1) - o
+        // companion troca de pose aqui mas só fica visível quando o
+        // overlay começa a desaparecer, no finish() abaixo.
+        document.dispatchEvent(new CustomEvent("camguard:intro-loaded"));
+        window.setTimeout(finish, STEP_DURATION);
+      }
+    }
+
+    function finish() {
+      sessionStorage.setItem(KEY, "1");
+      document.dispatchEvent(new CustomEvent("camguard:intro-transition"));
+      overlay.classList.add("intro-hide");
+      overlay.addEventListener(
+        "transitionend",
+        function () {
+          overlay.remove();
+          document.body.style.overflow = "";
+          document.dispatchEvent(new CustomEvent("camguard:intro-done"));
+        },
+        { once: true },
+      );
+    }
+
+    setProgress(0);
+    window.setTimeout(advance, STEP_DURATION);
+  })();
+</script>
+
+<style>
+  .intro-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    opacity: 1;
+    transition: opacity 0.6s ease;
+  }
+
+  .intro-overlay.intro-hide {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .intro-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+  }
+
+  .intro-scrim {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+  }
+
+  .intro-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .intro-eyebrow {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 3px;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  .intro-brand {
+    margin: 10px 0;
+    font-size: 32px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: #fff;
+  }
+
+  .intro-divider {
+    width: 64px;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.4);
+  }
+
+  .intro-footer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 32px;
+    padding: 0 40px;
+  }
+
+  .intro-taglines {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    letter-spacing: 2px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+  }
+
+  .intro-progress-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .intro-step-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--text-tertiary);
+  }
+
+  .intro-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: inline-block;
+  }
+
+  #intro-percent {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-tertiary);
+  }
+
+  .intro-bar-track {
+    height: 2px;
+    border-radius: 2px;
+    background: rgba(243, 221, 209, 0.1);
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+
+  .intro-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    transition: width 0.5s ease;
+  }
+
+  .intro-segments {
+    display: flex;
+    gap: 4px;
+  }
+
+  .intro-segments .seg {
+    flex: 1;
+    height: 3px;
+    background: rgba(243, 221, 209, 0.08);
+    transition: background-color 0.3s ease;
+  }
+
+  .intro-segments .seg.done {
+    background: rgba(251, 140, 98, 0.6);
+  }
+</style>

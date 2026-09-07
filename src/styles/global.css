@@ -1,0 +1,139 @@
+/* Reset e estilos base compartilhados pelo Layout. */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg-window);
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+/* Header */
+
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 20px 40px;
+  background: var(--bg-titlebar);
+  border-bottom: 1px solid rgba(243, 221, 209, 0.08);
+}
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.brand-mark {
+  font-size: 18px;
+  background: var(--gradient-brand);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.brand-sub {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 2px;
+}
+
+.site-nav {
+  display: flex;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+
+.site-nav a {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  transition: color 0.15s ease;
+}
+
+.site-nav a:hover {
+  color: var(--text-primary);
+}
+
+.site-nav a[aria-current="page"] {
+  color: var(--accent-soft);
+}
+
+/* Main */
+
+main {
+  flex: 1;
+}
+
+.page-shell {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 80px 40px;
+}
+
+.page-shell h1 {
+  font-size: 34px;
+  margin: 0 0 12px;
+}
+
+.page-shell p {
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* Footer */
+
+.site-footer {
+  padding: 28px 40px;
+  border-top: 1px solid rgba(243, 221, 209, 0.08);
+  background: var(--bg-titlebar);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tagline {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.tagline .dot {
+  margin: 0 8px;
+}
+
+.copy {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  margin: 0;
+}
