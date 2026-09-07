@@ -84,9 +84,6 @@ const STEPS = [
       if (current < STEPS.length) {
         window.setTimeout(advance, STEP_DURATION);
       } else {
-        // Fim do carregamento, ainda atrás do overlay (opacity 1) - o
-        // companion troca de pose aqui mas só fica visível quando o
-        // overlay começa a desaparecer, no finish() abaixo.
         document.dispatchEvent(new CustomEvent("camguard:intro-loaded"));
         window.setTimeout(finish, STEP_DURATION);
       }

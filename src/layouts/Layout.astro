@@ -2,7 +2,6 @@
 import "../styles/tokens.css";
 import "../styles/global.css";
 import Intro from "../components/Intro.astro";
-import Companion from "../components/Companion.astro";
 
 interface Props {
   title: string;
@@ -65,7 +64,6 @@ const currentPath =
       </p>
     </footer>
 
-    <Companion path={currentPath} />
     <Intro />
   </body>
 </html>
