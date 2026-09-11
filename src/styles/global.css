@@ -11,9 +11,17 @@ body {
 }
 
 html {
-  /* Rede de segurança: nada nesta página deve criar scroll horizontal, do
-     piso de 300px ao teto de 2560px+ (ver breakpoints em tokens.css). */
-  overflow-x: hidden;
+  /* NÃO colocar overflow-x:hidden aqui (nem em body) — quebra
+     position:sticky do .site-header. Qualquer overflow diferente de
+     visible num ancestral do elemento sticky (mesmo só num eixo) faz o
+     navegador tratar esse ancestral como o scrollport de referência pro
+     cálculo do sticky, em vez do viewport real; como nem html nem body têm
+     altura própria limitada (crescem com o conteúdo), esse scrollport
+     nunca rola de fato, e o sticky simplesmente não gruda. A proteção
+     contra overflow horizontal (necessária por causa dos glow-blob com
+     offset negativo) foi movida pra .main, abaixo do header na árvore —
+     ver ali. */
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -23,7 +31,6 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  overflow-x: hidden;
 }
 
 a {
@@ -51,6 +58,17 @@ img {
 /* Header */
 
 .site-header {
+  /* sticky (não fixed): permanece no fluxo normal do documento, então o
+     conteúdo abaixo dele nunca precisa de padding-top de compensação nem
+     de altura medida via JS — o próprio header reserva seu espaço, só
+     "gruda" no topo quando o scroll chega nele. */
+  position: sticky;
+  top: 0;
+  /* Acima de qualquer conteúdo de página (o mais alto em uso é z-index:2,
+     em .page-shell) pra não ser coberto ao rolar por baixo dele. O dropdown
+     mobile (.site-nav, z-index:60) é descendente do header, então já fica
+     acima de tudo dentro do próprio contexto de empilhamento do header. */
+  z-index: 40;
   padding-block: clamp(12px, 3vw, 20px);
   background: var(--bg-titlebar);
   border-bottom: 1px solid rgba(243, 221, 209, 0.08);
@@ -160,6 +178,13 @@ img {
 
 main {
   flex: 1;
+  /* Rede de segurança contra overflow horizontal (glow-blob com offset
+     negativo, ver GlowBackground.astro), do piso de 300px ao teto de
+     2560px+ (ver breakpoints em tokens.css). Vivia em html/body antes;
+     movida pra cá porque main é irmão do header na árvore (não ancestral),
+     então não interfere no position:sticky de .site-header (ver
+     comentário em html, acima). */
+  overflow-x: hidden;
 }
 
 .page-shell {
@@ -229,7 +254,11 @@ main {
 .noise-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1;
+  /* Precisa ficar acima do header agora que ele é sticky com z-index:40
+     (senão a textura para de cobrir a faixa do header ao rolar), mas
+     continua pointer-events:none, então não interfere em nada clicável,
+     nem no dropdown mobile do nav. */
+  z-index: 50;
   opacity: 0.05;
   mix-blend-mode: overlay;
   pointer-events: none;
