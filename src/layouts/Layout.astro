@@ -30,23 +30,41 @@ const currentPath =
     <title>{title} · CamGuard Hub</title>
   </head>
   <body>
+    <div class="noise-overlay" aria-hidden="true"></div>
+
     <header class="site-header">
-      <a class="brand" href="/">
-        <span class="brand-mark">CAMGUARD</span>
-        <span class="brand-sub">HUB</span>
-      </a>
-      <nav class="site-nav">
-        {
-          navLinks.map((link) => (
-            <a
-              href={link.href}
-              aria-current={currentPath === link.href ? "page" : undefined}
-            >
-              {link.label}
-            </a>
-          ))
-        }
-      </nav>
+      <div class="container site-header__inner">
+        <a class="brand" href="/">
+          <span class="brand-mark">CAMGUARD</span>
+          <span class="brand-sub">HUB</span>
+        </a>
+
+        <button
+          type="button"
+          class="nav-toggle"
+          id="nav-toggle"
+          aria-expanded="false"
+          aria-controls="site-nav"
+          aria-label="Abrir menu"
+        >
+          <span class="nav-toggle__bar"></span>
+          <span class="nav-toggle__bar"></span>
+          <span class="nav-toggle__bar"></span>
+        </button>
+
+        <nav class="site-nav" id="site-nav">
+          {
+            navLinks.map((link) => (
+              <a
+                href={link.href}
+                aria-current={currentPath === link.href ? "page" : undefined}
+              >
+                {link.label}
+              </a>
+            ))
+          }
+        </nav>
+      </div>
     </header>
 
     <main>
@@ -54,16 +72,63 @@ const currentPath =
     </main>
 
     <footer class="site-footer">
-      <div class="tagline">
-        <span>PRIVATE BY DESIGN</span>
-        <span class="dot">·</span>
-        <span>FREE TO USE</span>
+      <div class="container site-footer__inner">
+        <div class="tagline">
+          <span>PRIVATE BY DESIGN</span>
+          <span class="dot">·</span>
+          <span>FREE TO USE</span>
+        </div>
+        <p class="copy">
+          &copy; {new Date().getFullYear()} CamGuard Hub, feito por uma pessoa,
+          não é enterprise.
+        </p>
       </div>
-      <p class="copy">
-        &copy; {new Date().getFullYear()} CamGuard Hub. Código aberto.
-      </p>
     </footer>
 
     <Intro />
+
+    <script>
+      // Nav mobile: abaixo de 768px os links viram um dropdown, aberto por
+      // este botão hambúrguer. Fecha ao clicar em qualquer link.
+      const navToggle = document.getElementById("nav-toggle");
+      const siteNav = document.getElementById("site-nav");
+      if (navToggle && siteNav) {
+        navToggle.addEventListener("click", () => {
+          const isOpen = siteNav.classList.toggle("is-open");
+          navToggle.setAttribute("aria-expanded", String(isOpen));
+        });
+        siteNav.querySelectorAll("a").forEach((link) => {
+          link.addEventListener("click", () => {
+            siteNav.classList.remove("is-open");
+            navToggle.setAttribute("aria-expanded", "false");
+          });
+        });
+      }
+    </script>
+
+    <script>
+      // Scroll-reveal compartilhado: qualquer elemento com a classe .reveal
+      // ganha .is-visible ao entrar na viewport. Um observer por carregamento
+      // de página, reaproveitado por todas as páginas via este Layout.
+      const revealEls = document.querySelectorAll(".reveal");
+      if (revealEls.length) {
+        if ("IntersectionObserver" in window) {
+          const observer = new IntersectionObserver(
+            (entries) => {
+              for (const entry of entries) {
+                if (entry.isIntersecting) {
+                  entry.target.classList.add("is-visible");
+                  observer.unobserve(entry.target);
+                }
+              }
+            },
+            { threshold: 0.15 },
+          );
+          revealEls.forEach((el) => observer.observe(el));
+        } else {
+          revealEls.forEach((el) => el.classList.add("is-visible"));
+        }
+      }
+    </script>
   </body>
 </html>

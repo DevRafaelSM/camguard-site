@@ -1,0 +1,79 @@
+---
+// Glows radiais de marca (coral + violeta), fora de centro, atrás do conteúdo.
+// Extraído do padrão real do mockup (Claude Design) da home — centralizado aqui
+// pra ser aplicado em qualquer página, não só na home.
+interface Props {
+  variant?: "hero" | "section";
+}
+
+const { variant = "section" } = Astro.props;
+---
+
+<div class={`glow-bg glow-bg--${variant}`} aria-hidden="true">
+  <span class="glow-blob glow-blob--accent"></span>
+  <span class="glow-blob glow-blob--info"></span>
+</div>
+
+<style>
+  .glow-bg {
+    position: absolute;
+    inset: 0;
+    /* Sem overflow:hidden aqui de propósito: os blobs têm offsets negativos
+       (ex. bottom:-50px) porque o efeito PRECISA sangrar parcialmente pra
+       fora da section. overflow:hidden nesse nível cortava exatamente essa
+       parte. A rede de segurança contra overflow horizontal já existe em
+       html/body (ver global.css) — isso não depende deste elemento. */
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .glow-blob {
+    position: absolute;
+    border-radius: 50%;
+  }
+
+  .glow-blob--accent {
+    background: radial-gradient(circle, var(--accent), transparent 70%);
+    opacity: 0.28;
+    filter: blur(50px);
+  }
+
+  .glow-blob--info {
+    background: radial-gradient(circle, var(--info), transparent 70%);
+    opacity: 0.22;
+    filter: blur(60px);
+  }
+
+  /* Offsets ficam fixos (só posicionamento decorativo, sem risco de overflow
+     — .glow-bg já clipa qualquer coisa fora de si mesmo). Só o tamanho do
+     blob precisa ser fluido, pra não ficar desproporcional em 4K nem
+     absurdamente grande relativo a uma tela de 300px. */
+
+  .glow-bg--hero .glow-blob--accent {
+    width: clamp(260px, 28vw, 460px);
+    height: clamp(260px, 28vw, 460px);
+    top: -100px;
+    right: -80px;
+  }
+
+  .glow-bg--hero .glow-blob--info {
+    width: clamp(200px, 20vw, 340px);
+    height: clamp(200px, 20vw, 340px);
+    bottom: -50px;
+    left: 38%;
+  }
+
+  .glow-bg--section .glow-blob--accent {
+    width: clamp(180px, 20vw, 320px);
+    height: clamp(180px, 20vw, 320px);
+    top: -70px;
+    right: -50px;
+  }
+
+  .glow-bg--section .glow-blob--info {
+    width: clamp(140px, 14vw, 220px);
+    height: clamp(140px, 14vw, 220px);
+    bottom: -40px;
+    left: 32%;
+  }
+</style>

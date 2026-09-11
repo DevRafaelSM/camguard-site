@@ -1,10 +1,163 @@
 ---
 import Layout from "../layouts/Layout.astro";
+import GlowBackground from "../components/GlowBackground.astro";
+
+// PLACEHOLDER: builds do Hub ainda não existem (Fase 8 — empacotamento —
+// não começou, ver CLAUDE.md). Versão, hash e link são todos fictícios até lá.
+const downloads = [
+  { os: "Windows", meta: "versão · plataforma", cta: "Baixar .exe", hash: "hash sha256 (gerado no build real)" },
+  { os: "Linux", meta: "versão · plataforma", cta: "Baixar .AppImage", hash: "hash sha256 (gerado no build real)" },
+];
+
+const apkSteps = [
+  "Baixe o arquivo .apk direto do site (não é da Play Store).",
+  "No celular, permita instalação de fontes desconhecidas nas configurações.",
+  "Abra o arquivo baixado e confirme a instalação.",
+  "Abra o app e aponte pro endereço do Hub na sua rede local.",
+];
 ---
 
 <Layout title="Baixar">
-  <div class="page-shell">
-    <h1>Baixar</h1>
-    <p>Conteúdo em construção.</p>
-  </div>
+  <section class="page-shell container">
+    <GlowBackground variant="section" />
+    <span class="eyebrow">BAIXAR</span>
+    <h1>Escolha seu sistema</h1>
+    <p class="lead">
+      Sem cadastro, sem trial, sem versão paga. É a mesma versão pra todo
+      mundo.
+    </p>
+
+    <div class="downloads reveal">
+      {
+        downloads.map((d) => (
+          <div class="card download-card">
+            <div class="download-card__head">
+              <span class="download-card__os">{d.os}</span>
+              <span class="download-card__meta">{d.meta}</span>
+            </div>
+            {/* PLACEHOLDER: link real de download, disponível só depois do empacotamento (Fase 8). */}
+            <a class="btn btn-primary download-card__cta" href="#" aria-disabled="true">
+              {d.cta}
+            </a>
+            <div class="download-card__hash">{d.hash}</div>
+          </div>
+        ))
+      }
+    </div>
+
+    <div class="card card-highlight apk-guide reveal">
+      <h2>Instalando o app no celular (sem Play Store)</h2>
+      <p class="apk-guide__intro">
+        O app não está na Play Store. Você instala o APK direto.
+      </p>
+      <ol class="apk-steps">
+        {
+          apkSteps.map((step, i) => (
+            <li>
+              <span class="apk-steps__num">{i + 1}.</span>
+              <p>{step}</p>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
 </Layout>
+
+<style>
+  .lead {
+    color: var(--text-muted);
+    font-size: 15px;
+    max-width: 560px;
+    margin: 0 0 40px;
+  }
+
+  .downloads {
+    display: grid;
+    /* auto-fit + minmax com min(): reorganiza sozinho pra 1 coluna em telas
+       estreitas, sem breakpoint manual, e nunca exige mais largura do que
+       o container tem. */
+    grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+    gap: 20px;
+    margin-bottom: 48px;
+  }
+
+  .download-card__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+  }
+
+  .download-card__os {
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  .download-card__meta {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .download-card__cta {
+    display: block;
+    width: 100%;
+    margin-bottom: 14px;
+  }
+
+  .download-card__hash {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--text-muted);
+    word-break: break-all;
+    background: var(--bg-window);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    border: 1px solid rgba(243, 221, 209, 0.06);
+  }
+
+  .apk-guide h2 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 6px;
+    color: var(--text-primary);
+  }
+
+  .apk-guide__intro {
+    font-size: 13.5px;
+    color: var(--text-muted);
+    margin: 0 0 18px;
+  }
+
+  .apk-steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .apk-steps li {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .apk-steps li:last-child {
+    margin-bottom: 0;
+  }
+
+  .apk-steps__num {
+    flex: none;
+    color: var(--info);
+    font-family: var(--font-mono);
+    font-size: 13px;
+  }
+
+  .apk-steps p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+  }
+
+</style>

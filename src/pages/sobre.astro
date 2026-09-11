@@ -1,10 +1,142 @@
 ---
 import Layout from "../layouts/Layout.astro";
+import GlowBackground from "../components/GlowBackground.astro";
+
+const changelog = [
+  { version: "v0.9", desc: "Painel web reorganizado, suporte a múltiplos cômodos." },
+  { version: "v0.7", desc: "Adicionado suporte a câmeras IP via RTSP/ONVIF." },
+  { version: "v0.4", desc: "App Android inicial para transformar celular em câmera." },
+  { version: "v0.1", desc: "Primeira versão, uso pessoal." },
+];
 ---
 
 <Layout title="Sobre">
-  <div class="page-shell">
-    <h1>Sobre</h1>
-    <p>Conteúdo em construção.</p>
-  </div>
+  <section class="page-shell container">
+    <GlowBackground variant="section" />
+    <span class="eyebrow">SOBRE</span>
+    <h1>Por que isso existe</h1>
+
+    <!-- PLACEHOLDER: história pessoal — texto abaixo é rascunho do mockup,
+         só o usuário pode escrever a versão final (ver CLAUDE.md). -->
+    <p class="story reveal">
+      Comecei o CamGuard Hub porque tinha celulares antigos numa gaveta e não
+      queria pagar mensalidade de câmera de segurança comercial. O projeto
+      nasceu pra resolver um problema meu, e continua sendo mantido do mesmo
+      jeito: sem meta de crescimento, sem pressão de investidor, só
+      melhorando quando dá tempo. Disponibilizo pra quem mais quiser usar, do
+      jeito que é: honesto sobre o que faz e o que não faz.
+    </p>
+
+    <h2>Changelog</h2>
+    <p class="changelog-note mono">
+      aguardando changelog real: abaixo, estrutura de exemplo
+    </p>
+    <div class="changelog reveal">
+      {
+        changelog.map((entry) => (
+          <div class="changelog-entry">
+            <span class="changelog-entry__dot" />
+            <span class="changelog-entry__version mono">{entry.version}</span>
+            <p>{entry.desc}</p>
+          </div>
+        ))
+      }
+    </div>
+
+    <div class="card support reveal">
+      <div>
+        <h2>Gostou do projeto?</h2>
+        <p>
+          O CamGuard Hub é e sempre será gratuito, com todas as funções
+          liberadas. Apoiar no Ko-fi é só uma forma opcional de ajudar a
+          manter o projeto. Não desbloqueia nada e nenhuma função fica de
+          fora de quem não apoia.
+        </p>
+      </div>
+      <!-- PLACEHOLDER: link real do Ko-fi ainda não existe. -->
+      <a class="btn btn-primary support__cta" href="#">Apoiar no Ko-fi</a>
+    </div>
+  </section>
 </Layout>
+
+<style>
+  .story {
+    font-size: 16.5px;
+    line-height: 1.7;
+    color: var(--text-secondary);
+    max-width: 720px;
+    margin: 0 0 64px;
+  }
+
+  h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 8px;
+  }
+
+  .changelog-note {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 0 0 24px;
+  }
+
+  .changelog {
+    border-left: 2px solid rgba(243, 221, 209, 0.1);
+    padding-left: 24px;
+    margin-bottom: 64px;
+  }
+
+  .changelog-entry {
+    position: relative;
+    margin-bottom: 22px;
+  }
+
+  .changelog-entry:last-child {
+    margin-bottom: 0;
+  }
+
+  .changelog-entry__dot {
+    position: absolute;
+    left: -29px;
+    top: 4px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .changelog-entry__version {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .changelog-entry p {
+    margin: 4px 0 0;
+    font-size: 14.5px;
+    color: var(--text-secondary);
+  }
+
+  .support {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .support h2 {
+    font-size: 17px;
+    color: var(--text-primary);
+  }
+
+  .support p {
+    font-size: 14px;
+    color: var(--text-tertiary);
+    margin: 0;
+    max-width: 440px;
+  }
+
+  .support__cta {
+    flex: none;
+  }
+</style>

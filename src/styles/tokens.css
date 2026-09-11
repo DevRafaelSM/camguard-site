@@ -33,4 +33,35 @@
   --radius-sm: 3px;
   --radius-md: 6px;
   --radius-lg: 9px;
+
+  /* Easing/duração — usar nestes valores em qualquer transition/animation
+     nova, não em "ease"/"linear" soltos. --ease-standard é a curva padrão
+     do Material (desacelera no fim), --duration-* são os três degraus de
+     peso: fast pra microinterações de hover, base pra mudanças de estado
+     de UI (menu, barra de progresso), slow pra fades maiores (reveal, intro). */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+  --duration-slow: 600ms;
 }
+
+/*
+ * Breakpoints do projeto — requisito obrigatório: o site precisa funcionar
+ * de 300px (smartphones bem estreitos) até 2560px+ (4K/ultra-wide). Use
+ * estes valores em qualquer @media novo, não invente números soltos.
+ * CSS puro não permite var() dentro de @media, por isso ficam documentados
+ * aqui como referência em vez de custom properties.
+ *
+ *   300px  — piso mínimo absoluto (smartphones muito estreitos)
+ *   480px  — smartphones comuns
+ *   768px  — tablets / ponto onde o nav vira menu hambúrguer
+ *   1024px — tablets grandes / laptops pequenos
+ *   1440px — desktop padrão
+ *   1920px — desktop grande / Full HD
+ *   2560px — 4K e monitores ultra-wide
+ *
+ * Preferir técnicas fluidas (clamp(), minmax(), auto-fit, %) a breakpoints
+ * fixos sempre que possível — os breakpoints acima são para os casos em que
+ * o layout precisa mudar de estrutura (ex.: nav virando dropdown, grid de
+ * 2 colunas virando 1 coluna), não pra ajustar tamanhos.
+ */

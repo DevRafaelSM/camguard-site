@@ -115,7 +115,7 @@ const STEPS = [
     inset: 0;
     z-index: 9999;
     opacity: 1;
-    transition: opacity 0.6s ease;
+    transition: opacity var(--duration-slow) var(--ease-standard);
   }
 
   .intro-overlay.intro-hide {
@@ -147,24 +147,26 @@ const STEPS = [
   }
 
   .intro-eyebrow {
-    margin: 0;
+    margin: 0 16px;
     font-family: var(--font-mono);
-    font-size: 10px;
-    letter-spacing: 3px;
+    /* Cresce com a tela pra não ficar minúsculo/perdido num monitor 4K, e
+       tem piso pra continuar legível em 300px. */
+    font-size: clamp(9px, 1vw, 14px);
+    letter-spacing: clamp(1.5px, 0.2vw, 3px);
     font-weight: 600;
     color: var(--text-muted);
   }
 
   .intro-brand {
-    margin: 10px 0;
-    font-size: 32px;
+    margin: 10px 16px;
+    font-size: clamp(26px, 4vw, 52px);
     font-weight: 600;
     letter-spacing: 2px;
     color: #fff;
   }
 
   .intro-divider {
-    width: 64px;
+    width: clamp(56px, 8vw, 120px);
     height: 1px;
     background: rgba(255, 255, 255, 0.4);
   }
@@ -173,15 +175,24 @@ const STEPS = [
     position: absolute;
     left: 0;
     right: 0;
-    bottom: 32px;
-    padding: 0 40px;
+    bottom: clamp(16px, 4vw, 32px);
+    padding: 0 clamp(16px, 6vw, 40px);
+  }
+
+  .intro-taglines,
+  .intro-progress {
+    /* Sem isso, num monitor 2560px+ a barra fina e as taglines esticariam
+       de ponta a ponta da tela — cap central igual ao resto do bloco. */
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .intro-taglines {
     display: flex;
     justify-content: space-between;
     font-family: var(--font-mono);
-    font-size: 9.5px;
+    font-size: clamp(8px, 0.9vw, 11px);
     letter-spacing: 2px;
     font-weight: 600;
     color: var(--text-muted);
@@ -231,7 +242,7 @@ const STEPS = [
     height: 100%;
     width: 0%;
     background: var(--accent);
-    transition: width 0.5s ease;
+    transition: width var(--duration-base) var(--ease-standard);
   }
 
   .intro-segments {
@@ -243,7 +254,7 @@ const STEPS = [
     flex: 1;
     height: 3px;
     background: rgba(243, 221, 209, 0.08);
-    transition: background-color 0.3s ease;
+    transition: background-color var(--duration-base) var(--ease-standard);
   }
 
   .intro-segments .seg.done {

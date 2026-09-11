@@ -1,10 +1,257 @@
 ---
 import Layout from "../layouts/Layout.astro";
+import GlowBackground from "../components/GlowBackground.astro";
+
+const flow = [
+  { label: "Celular / câmera IP", sub: "app Android ou RTSP", color: "var(--accent)" },
+  { label: "Hub", sub: "Windows / Linux, na sua casa", color: "var(--accent-soft)" },
+  { label: "Você", sub: "painel na rede local", color: "var(--info)" },
+];
+
+const steps = [
+  "Instale o Hub no computador que vai ficar ligado em casa.",
+  "Instale o app nos celulares antigos, ou aponte a câmera IP direto pro Hub.",
+  "Abra o painel do Hub na sua rede local e configure os cômodos.",
+  "Assista, grave e receba alertas, tudo sem sair da sua rede.",
+];
+
+// PLACEHOLDER: lista de câmeras compatíveis extraída do mockup, ainda não
+// confirmada como documento formal (ver CLAUDE.md, seção "Status exato").
+const compatible = [
+  {
+    title: "Android 6.0+",
+    desc: "Via app CamGuard Cam, instalado como APK.",
+  },
+  {
+    title: "Câmeras IP com RTSP",
+    desc: "Padrão ONVIF, a maioria das câmeras IP genéricas.",
+  },
+  {
+    title: "Câmeras USB",
+    desc: "Webcams e capturadoras ligadas direto no Hub.",
+  },
+];
 ---
 
 <Layout title="Como funciona">
-  <div class="page-shell">
-    <h1>Como funciona</h1>
-    <p>Conteúdo em construção.</p>
-  </div>
+  <section class="page-shell container">
+    <GlowBackground variant="section" />
+    <span class="eyebrow">COMO FUNCIONA</span>
+    <h1>Do celular na gaveta ao painel na sua tela</h1>
+
+    <div class="flow reveal">
+      <div class="flow-step">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={flow[0].color} stroke-width="1.6">
+          <rect x="7" y="2" width="10" height="20" rx="2"></rect>
+          <line x1="10" y1="19" x2="14" y2="19"></line>
+        </svg>
+        <div class="flow-step__title">{flow[0].label}</div>
+        <div class="flow-step__sub">{flow[0].sub}</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-step--highlight">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={flow[1].color} stroke-width="1.6">
+          <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+          <line x1="7" y1="9" x2="13" y2="9"></line>
+          <line x1="7" y1="13" x2="11" y2="13"></line>
+          <circle cx="17" cy="13" r="1.2" fill={flow[1].color} stroke="none"></circle>
+        </svg>
+        <div class="flow-step__title" style={`color:${flow[1].color}`}>{flow[1].label}</div>
+        <div class="flow-step__sub">{flow[1].sub}</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={flow[2].color} stroke-width="1.6">
+          <circle cx="12" cy="8" r="3.2"></circle>
+          <path d="M5 20c0-4 3-6 7-6s7 2 7 6"></path>
+        </svg>
+        <div class="flow-step__title">{flow[2].label}</div>
+        <div class="flow-step__sub">{flow[2].sub}</div>
+      </div>
+    </div>
+
+    <div class="columns reveal">
+      <div>
+        <h2>Pra começar</h2>
+        <ol class="steps">
+          {
+            steps.map((step, i) => (
+              <li>
+                <span class="steps__num">{i + 1}</span>
+                <p>{step}</p>
+              </li>
+            ))
+          }
+        </ol>
+      </div>
+      <div>
+        <h2>Câmeras compatíveis</h2>
+        <!-- PLACEHOLDER: ver nota acima sobre esta lista. -->
+        <div class="compat-list">
+          {
+            compatible.map((item) => (
+              <div class="compat-item">
+                <span class="compat-dot">●</span>
+                <div>
+                  <div class="compat-item__title">{item.title}</div>
+                  <div class="compat-item__desc">{item.desc}</div>
+                </div>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+    </div>
+  </section>
 </Layout>
+
+<style>
+  .flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 64px;
+    flex-wrap: wrap;
+  }
+
+  .flow-step {
+    flex: 1;
+    /* min() em vez de min-width fixo: nunca exige mais que 100% do
+       container, então não força overflow nem no piso de 300px. */
+    min-width: min(160px, 100%);
+    background: var(--bg-card);
+    border: 1px solid rgba(243, 221, 209, 0.08);
+    border-radius: var(--radius-lg);
+    padding: 22px;
+    text-align: center;
+  }
+
+  .flow-step--highlight {
+    border-color: var(--accent);
+  }
+
+  .flow-step svg {
+    margin-bottom: 10px;
+  }
+
+  .flow-step__title {
+    font-weight: 600;
+    font-size: 15px;
+  }
+
+  .flow-step__sub {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .flow-arrow {
+    flex: 0 0 60px;
+    text-align: center;
+    color: var(--text-tertiary);
+    font-size: 22px;
+  }
+
+  .columns {
+    display: grid;
+    /* auto-fit + minmax: reorganiza sozinho pra 1 coluna em telas estreitas,
+       sem precisar de um breakpoint manual. min(240px,100%) garante que a
+       coluna nunca exija mais largura do que o container tem (protege o
+       piso de 300px). */
+    grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+    gap: clamp(28px, 6vw, 56px);
+  }
+
+  .columns h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 20px;
+  }
+
+  .steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .steps li {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+
+  .steps__num {
+    flex: none;
+    width: 26px;
+    height: 26px;
+    border-radius: var(--radius-md);
+    background: var(--bg-input);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .steps p {
+    margin: 0;
+    font-size: 14.5px;
+    line-height: 1.55;
+    color: var(--text-secondary);
+    padding-top: 3px;
+  }
+
+  .compat-list {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .compat-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    background: var(--bg-input);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+  }
+
+  .compat-dot {
+    color: var(--info);
+    font-size: 14px;
+    flex: none;
+    margin-top: 1px;
+  }
+
+  .compat-item__title {
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .compat-item__desc {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  /* Abaixo de 600px o fluxo de 3 caixas empilha em coluna — mais legível
+     que 3 caixas de min-width:160px espremidas lado a lado. */
+  @media (max-width: 599px) {
+    .flow {
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .flow-step {
+      width: 100%;
+    }
+
+    .flow-arrow {
+      transform: rotate(90deg);
+    }
+  }
+</style>
