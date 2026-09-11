@@ -2,6 +2,7 @@
 import "../styles/tokens.css";
 import "../styles/global.css";
 import Intro from "../components/Intro.astro";
+import BrandCameraIcon from "../components/BrandCameraIcon.astro";
 
 interface Props {
   title: string;
@@ -34,10 +35,7 @@ const currentPath =
 
     <header class="site-header">
       <div class="container site-header__inner">
-        <a class="brand" href="/">
-          <span class="brand-mark">CAMGUARD</span>
-          <span class="brand-sub">HUB</span>
-        </a>
+        <BrandCameraIcon />
 
         <button
           type="button"

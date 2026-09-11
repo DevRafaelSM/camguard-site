@@ -65,25 +65,7 @@ img {
 
 .brand {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
-  font-weight: 700;
-  letter-spacing: 1px;
-}
-
-.brand-mark {
-  font-size: 18px;
-  background: var(--gradient-brand);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.brand-sub {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text-muted);
-  letter-spacing: 2px;
+  align-items: center;
 }
 
 /* Botão hambúrguer — só existe visualmente abaixo de 768px (ver .site-nav). */
