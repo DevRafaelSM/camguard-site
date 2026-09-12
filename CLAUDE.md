@@ -34,17 +34,79 @@ Esta seção é a **única fonte de verdade** sobre o que está feito vs. penden
 - Screenshots reais do Hub (Modo Hub, grid de câmeras) — `.mock-window` em `index.astro` é o placeholder já pronto pra receber isso.
 - Roadmap real (baseado em `../camguard-hub/docs/ARQUITETURA.md`/`PLANO_DE_ATAQUE.md`).
 - Links de download reais — não existem ainda, Fase 8 do Hub (empacotamento) não começou.
-- Lista de câmeras compatíveis como documento formal (hoje só existe como rascunho extraído do mockup, em `como-funciona.astro`).
+- Lista de câmeras compatíveis como documento formal (hoje só existe como rascunho extraído do mockup — removida de `como-funciona.astro` nesta sessão, texto preservado no bullet abaixo sobre o bloco de abertura removido).
 - História pessoal (Sobre) — o texto atual é rascunho do mockup; só o usuário pode escrever a versão final.
+- **Isenção de responsabilidade (disclaimer)** sobre dano colateral de hardware do usuário: bateria inchando/explodindo, tela quebrando por causa de bateria inchada, dano por exposição a chuva/calor em celulares reaproveitados como câmera. **Decisão atualizada** (substitui a ideia anterior de página nova e dedicada): vai virar uma seção própria dentro da reformulação de `/privacidade` (que também vai ser renomeada de "Privacidade e segurança" pra "Termos de Uso e Privacidade" — trabalho ainda não iniciado). **Lembrete obrigatório pra quando essa reformulação for feita**: a seção do aviso de bateria precisa ter `id="bateria"` exatamente — `como-funciona.astro` (aba Documentação, entradas "O que fica local e o que sai da sua rede" e "Cuidados com bateria em uso contínuo") já linka pra `/privacidade#bateria` antecipando isso; sem esse id exato o link fica morto.
+- **Formato do conteúdo dos tutoriais** (GIF/vídeo/screenshots) ainda não decidido pelo usuário. **Atualização**: a "Página de Tutoriais" deixou de ser uma página nova em aberto — virou a aba "Tutoriais" dentro de `como-funciona.astro` (rota mantida, nome de exibição agora "Tutoriais e documentação", ver seção "Sessão em andamento" mais abaixo), já com os 12 tutoriais escritos e um placeholder reservado (`.tutorial-gif`) em cada um. O que falta é só o conteúdo real desses placeholders: vídeo gravado pelo usuário, vídeo gerado por IA, GIFs curtos sem som, ou texto + screenshots — nenhuma dessas opções decidida ainda.
+- **Bloco de abertura removido de `como-funciona.astro`** (a página agora começa direto nas abas, sem nenhum eyebrow/h1/diagrama/lista acima delas) — **planejado para reaproveitar em outro lugar (Início, ou uma seção própria) futuramente**, ainda sem data/decisão de onde exatamente. Não é conteúdo perdido, só realocado. Estrutura e texto exatos removidos, pra não se perder:
+  ```
+  eyebrow: "COMO FUNCIONA"
+  h1: "Do celular na gaveta ao painel na sua tela"
+
+  // Diagrama de fluxo (3 caixas + 2 setas), ícones em SVG inline (não lib de ícones):
+  flow = [
+    { label: "Celular / câmera IP", sub: "app Android ou RTSP", ícone: retângulo vertical com um traço embaixo (celular) },
+    { label: "Hub", sub: "Windows / Linux, na sua casa", ícone: retângulo com duas linhas + um ponto (janela/painel), caixa central destacada (borda accent) },
+    { label: "Você", sub: "painel na rede local", ícone: círculo + arco (pessoa) },
+  ]
+  // ordem visual: [Celular/câmera IP] → [Hub, destacado] → [Você]
+
+  // Lista "Câmeras compatíveis" (h2 + 3 itens, cada um com dot + título + descrição):
+  compatible = [
+    { title: "Android 7.0+", desc: "Via app CamGuard Camera, instalado como APK." },
+    { title: "Câmeras IP com RTSP", desc: "Padrão ONVIF, a maioria das câmeras IP genéricas." },
+    { title: "Câmeras USB", desc: "Webcams e capturadoras ligadas direto no Hub." },
+  ]
+  ```
+  Nota sobre a lista de câmeras compatíveis: já era marcada como PLACEHOLDER extraído do mockup mesmo antes desta remoção (ver bullet "Lista de câmeras compatíveis como documento formal" acima) — isso não mudou, só o lugar onde vai reaparecer ainda não foi decidido.
+
+> Nota de conexão entre projetos (registro, não decisão): o aviso sobre risco de explosão de bateria em uso 24/7 no carregador pode fazer sentido aparecer tanto na página de disclaimer acima quanto na tela de consentimento obrigatória do produto (pendência já registrada no CLAUDE.md do `camguard-hub`). Onde exatamente esse aviso deve viver ainda está em aberto, não resolvido.
 
 ### 3. Próximos passos
 
 1. Usuário valida visualmente no navegador (item 2 acima) — sticky, dropdown mobile, ícone em 50px.
 2. Usuário revisa a lista de commits locais e autoriza (ou não) o push pro `origin/main`.
 
+## Bug real resolvido — overflow non-visible em qualquer elemento da árvore pode criar scroll interno indesejado — nunca usar overflow-x:hidden para conter sangramento visual, usar clip-path (REFERÊNCIA DEFINITIVA, não re-investigar)
+
+**Esta investigação levou 4 rodadas até a causa raiz real — documentado aqui com destaque alto pra nunca repetir o processo.**
+
+- **Sintoma**: página com duas barras de rolagem (uma do documento, uma dentro de um elemento específico da árvore). Scroll travando/"correndo atrás" da posição real, especificamente ao recarregar a página no meio do scroll (nunca reproduzia recarregando do topo).
+- **Causa raiz real** (só identificada corretamente na 4ª tentativa): pela **CSS Overflow Module Level 3**, declarar `overflow-x` com qualquer valor non-visible **sem declarar `overflow-y`** faz o navegador computar `overflow-y` automaticamente como `auto` — mesmo que `overflow-y` nunca tenha sido escrito em lugar nenhum, e mesmo em elementos que **não são item de flex/grid**. Não é (só) o problema de "tamanho mínimo automático zero" do Flexbox — essa foi a primeira hipótese testada e só parcialmente correta (explicava compressão em item de flex, não o bug em blocos comuns).
+- **Consequência**: **qualquer** elemento com `overflow-x:hidden` na árvore vira candidato real a scroll container. E o navegador conta no `scrollHeight` desse elemento até conteúdo posicionado de forma absoluta com offset negativo, fora do fluxo normal (ex.: os glow-blob de `GlowBackground.astro`, que sangram de propósito pra fora da section via `bottom:-50px`) — mesmo esse conteúdo nunca afetando `clientHeight`/layout normal do ancestral, ele infla o `scrollHeight` assim que qualquer ancestral ganha overflow non-visible em qualquer eixo.
+- **Tentativas que NÃO resolveram** (documentadas pra não repetir):
+  1. Mover `overflow-x:hidden` de `html`/`body` pra `main` (resolveu o bug do `position:sticky` do header, mas não este).
+  2. `flex: 1 0 auto` em `main` (resolveu um problema real de compressão do item de flex, mas não era a causa deste bug).
+  3. Mover `overflow-x:hidden` de `main` pra um wrapper interno (`.overflow-guard`), supondo que um bloco comum (não item de flex) nunca vira scroll container — **falso**: blocos comuns também são afetados pela regra de `overflow-y` computado, e ainda assim contam o sangramento do glow-blob no próprio `scrollHeight`.
+  4. Tentar declarar `overflow-y: visible` explicitamente ao lado de `overflow-x: hidden` — **falso também**: a regra da spec olha o valor computado, não se foi escrito à mão ou herdado por omissão; não existe combinação de `overflow-x`/`overflow-y` que preserve os dois em `visible` computado se um deles for non-visible.
+- **CORREÇÃO DEFINITIVA**: nunca usar `overflow-x:hidden`/`overflow:hidden` pra conter sangramento visual decorativo (ex. glow-blob com offset negativo). Usar `clip-path: inset(0)` no lugar — recorta visualmente do mesmo jeito (é só uma operação de pintura), mas nunca interage com o algoritmo de overflow/scroll do navegador, eliminando essa classe inteira de bug pela raiz. Aplicado em `.overflow-guard` (`global.css`, wrapper dentro de `<main>` em `Layout.astro`).
+- **REGRA PARA QUALQUER TRABALHO FUTURO**: se precisar recortar/conter algo que vaza visualmente da caixa de um elemento, a primeira escolha é sempre `clip-path`, nunca `overflow:hidden` — a menos que scroll real seja genuinamente desejado naquele elemento.
+
+## Bug real resolvido — CSS escopado do Astro não se aplica a elementos criados via JS em runtime (REFERÊNCIA DEFINITIVA, não re-investigar)
+
+**CSS escopado do Astro (`data-astro-cid-*`) NUNCA se aplica a elementos criados via `document.createElement()` em runtime** — o atributo de escopo só é injetado em elementos presentes no template estático do componente (a marcação `.astro` em si), nunca em nós montados depois, via JS. Regras CSS escritas pra esses elementos existem de verdade no bundle final (aparecem normal em "view source" do CSS gerado, `grep` encontra elas sem problema), mas nunca casam com nada — **silenciosamente, sem erro nenhum no console**, o elemento só cai no default do navegador pra aquela tag.
+
+**Sintoma real que expôs isso** (`SectionRail.astro`): dots/itens da lista do rail apareciam como texto solto desalinhado (posições horizontais diferentes por item, sem retângulo de fundo nenhum) mesmo com o CSS "correto" já escrito e presente no arquivo gerado. Medido de verdade no navegador (Playwright + `getComputedStyle`), não por leitura de código: os elementos `<a class="rail-dot-link">` (criados via `document.createElement("a")` no `<script>` do componente) saíam com `display:inline`, `width:auto`, `overflow:visible` — nenhuma das regras de `.rail-dot-link` no CSS estava sendo aplicada.
+
+**"Confirmar que a regra existe no CSS gerado" NÃO é prova de que ela se aplica.** Isso já tinha enganado uma investigação nesta mesma sessão (o bug do scroll duplicado passou por 3 "confirmações via CSS" antes da causa raiz real aparecer) — esta é a mesma categoria de erro, mecanismo diferente. A única prova real de que uma regra CSS está de fato afetando um elemento é medir o elemento no DOM renderizado (`getComputedStyle`, `getBoundingClientRect`), nunca só grepar o arquivo/bundle.
+
+**CORREÇÃO**: usar `:global(seletor)` (mecanismo nativo do Astro pra sair do escopo automático) em qualquer regra CSS de um componente `.astro` que precise atingir elementos gerados via JS. Elementos escritos direto no template do componente continuam escopados normalmente (não precisam de `:global()`) — só os montados em runtime exigem isso. Aplicado em `SectionRail.astro`: `.section-rail`/`.rail-toggle`/`.rail-sheet` (estáticos no template) ficaram escopados normalmente; `.rail-item`/`.rail-dot-link`/`.rail-dot`/`.rail-label`/`.rail-sheet-link` (todos criados via `document.createElement`) tiveram que virar `:global(.rail-item)`, `:global(.rail-dot-link)` etc.
+
+**REGRA PARA QUALQUER TRABALHO FUTURO**: qualquer componente `.astro` que monta parte do próprio DOM via JS (`document.createElement`, `innerHTML`, etc.) precisa envolver em `:global()` toda regra CSS escopada que deveria atingir esses elementos — decidir isso ANTES de escrever o CSS, não descobrir depois por um bug visual difícil de diagnosticar. E, de forma mais geral: nunca declarar uma correção de CSS "confirmada" só por ela aparecer no arquivo/bundle gerado — confirmar sempre por medição no DOM real (`getComputedStyle`/`getBoundingClientRect`, via DevTools ou Playwright).
+
+## Bug real resolvido — scroll-spy nunca ativa o último item de uma lista curta, se não sobrar página suficiente abaixo dele (REFERÊNCIA DEFINITIVA, não re-investigar)
+
+**Sintoma**: no `SectionRail.astro`, rolar manualmente até o fim absoluto da página (ou clicar no último dot) não marcava o último item da lista como ativo — o destaque ficava preso no penúltimo, mesmo com o scroll já no máximo possível.
+
+**Causa raiz, confirmada por medição (Playwright)**: o critério de seção ativa (ver seção acima sobre critério por posição do topo, não por área visível) depende do título da seção cruzar uma linha de referência (`headerHeight() + 16`). Se a ÚLTIMA seção da lista atual for curta o suficiente (ex. aba "Documentação", entradas sem GIF, bem mais baixas que os tutoriais), pode não sobrar espaço de página abaixo dela pra esse cruzamento acontecer — o documento bate no `scrollHeight` máximo antes do título dela alcançar a linha. Medido de verdade: na aba Documentação, com o scroll no máximo absoluto (`scrollY + innerHeight === scrollHeight`), o topo do último item ("Resolvendo problemas comuns") ainda estava a ~518px, bem acima do limiar de 107px — nunca cruzava, por mais que se rolasse.
+
+**CORREÇÃO**: tratar "documento já rolado até o fim" (`window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2`, com pequena tolerância) como caso especial que força o ÚLTIMO item da lista atual como ativo, ignorando o critério normal de "topo cruzou a linha" só nesse caso. Genérico por design (baseado em "o documento bateu no fim", não no conteúdo de nenhuma seção específica) — reaparece em qualquer lista futura cujo último item seja curto, não só na Documentação de hoje. Verificado tanto no listener de scroll (rolagem manual) quanto explicitamente logo após o clique programático (`scrollToSection()` seguido de `updateActive()`), sem depender só do evento de scroll disparar a tempo.
+
+**REGRA PARA QUALQUER TRABALHO FUTURO**: qualquer implementação de scroll-spy baseada em "o topo cruzou uma linha" precisa desse caso especial de fim de documento — sem ele, o último item de qualquer lista cujo último elemento seja mais curto que a distância entre a linha de referência e o rodapé da página nunca ativa, por mais que se role.
+
 ## O que é
 
-Site de apresentação/distribuição do CamGuard Hub (projeto irmão, privado, em `../camguard-hub`). Estático, Astro puro (sem React/Vue), deploy planejado no Netlify. 5 páginas: Início (`/`), Como funciona (`/como-funciona`), Baixar (`/baixar`), Privacidade e segurança (`/privacidade`), Sobre (`/sobre`).
+Site de apresentação/distribuição do CamGuard Hub (projeto irmão, privado, em `../camguard-hub`). Estático, Astro puro (sem React/Vue), deploy planejado no Netlify. 5 páginas: Início (`/`), Tutoriais e documentação (`/como-funciona` — rota mantida, nome de exibição mudou), Baixar (`/baixar`), Privacidade e segurança (`/privacidade`), Sobre (`/sobre`).
 
 ## Identidade visual (fonte da verdade: `../camguard-hub/apps/hub/assets/theme.env`)
 
