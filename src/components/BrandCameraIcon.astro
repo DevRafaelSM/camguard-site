@@ -272,10 +272,11 @@
 
 <script>
   // Reflexo (.highlight) segue o cursor com inércia (lerp), só quando há
-  // mouse real (hover:hover + pointer:fine) — em touch, sem fallback via
-  // pointerdown, o reflexo fica centrado e estático (default do CSS acima).
-  // Piscada roda sempre (independe de haver cursor), respeitando
-  // prefers-reduced-motion.
+  // mouse real (hover:hover + pointer:fine). Sem mouse real (touch, incluindo
+  // tablets sem mouse), a câmera "escaneia" o ambiente sozinha com o mesmo
+  // lerp, exceto sob prefers-reduced-motion, onde o reflexo fica centrado e
+  // estático (nenhum dos dois modos anima). Piscada roda sempre (independe
+  // do modo), respeitando prefers-reduced-motion.
   (function () {
     const iris = document.getElementById("camera-iris");
     const highlight = document.getElementById("camera-highlight");
@@ -289,11 +290,22 @@
     let targetX = 0;
     let targetY = 0;
 
+    // Mesmo cálculo de raio percorrível usado pelos dois modos (cursor e
+    // escaneamento autônomo), pra que o alcance do movimento seja idêntico.
+    function getMaxTravel() {
+      const irisRect = iris.getBoundingClientRect();
+      const dotRect = highlight.getBoundingClientRect();
+
+      const irisRadius = irisRect.width / 2;
+      const dotRadius = dotRect.width / 2;
+      const margin = irisRect.width * 0.005;
+      return Math.max(0, irisRadius - dotRadius - margin);
+    }
+
     function updateTarget(clientX, clientY) {
       if (reduceMotion.matches) return;
 
       const irisRect = iris.getBoundingClientRect();
-      const dotRect = highlight.getBoundingClientRect();
 
       const cx = irisRect.left + irisRect.width / 2;
       const cy = irisRect.top + irisRect.height / 2;
@@ -302,11 +314,7 @@
       const dy = clientY - cy;
       const distance = Math.hypot(dx, dy);
 
-      const irisRadius = irisRect.width / 2;
-      const dotRadius = dotRect.width / 2;
-      const margin = irisRect.width * 0.005;
-      const maxTravel = Math.max(0, irisRadius - dotRadius - margin);
-
+      const maxTravel = getMaxTravel();
       const reactionDistance = Math.max(window.innerWidth, window.innerHeight) * 0.1;
       const strength = Math.min(distance / reactionDistance, 1);
 
@@ -345,6 +353,40 @@
     }
 
     const randomBetween = (min, max) => min + Math.random() * (max - min);
+
+    // Sem mouse real, o reflexo "escaneia" o ambiente sozinho: sequência de
+    // pontos-alvo (frações de maxTravel, magnitude <=1) formando um padrão
+    // sem repetição óbvia, com pausas variáveis entre cada movimento pra
+    // parecer orgânico. Mesmo lerp de animate() cuida da suavidade.
+    const scanPattern = [
+      { x: -0.9, y: 0.15 },
+      { x: 0.55, y: -0.8 },
+      { x: -0.1, y: 0.9 },
+      { x: 0.85, y: 0.25 },
+      { x: -0.55, y: -0.6 },
+      { x: 0.15, y: -0.1 },
+    ];
+
+    function scheduleNextScanStep(index) {
+      if (reduceMotion.matches) return;
+
+      const delay = randomBetween(900, 2600);
+
+      setTimeout(() => {
+        const point = scanPattern[index % scanPattern.length];
+        const maxTravel = getMaxTravel();
+
+        targetX = point.x * maxTravel;
+        targetY = point.y * maxTravel;
+
+        scheduleNextScanStep(index + 1);
+      }, delay);
+    }
+
+    if (!canTrack && !reduceMotion.matches) {
+      scheduleNextScanStep(0);
+      animate();
+    }
 
     function blink() {
       if (reduceMotion.matches) return;
