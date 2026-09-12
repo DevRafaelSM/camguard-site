@@ -19,8 +19,8 @@ html {
      altura própria limitada (crescem com o conteúdo), esse scrollport
      nunca rola de fato, e o sticky simplesmente não gruda. A proteção
      contra overflow horizontal (necessária por causa dos glow-blob com
-     offset negativo) foi movida pra .main, abaixo do header na árvore —
-     ver ali. */
+     offset negativo) foi movida pra .overflow-guard, dentro de main,
+     abaixo do header na árvore — ver ali. */
   scrollbar-gutter: stable;
 }
 
@@ -130,8 +130,12 @@ img {
   color: var(--accent-soft);
 }
 
-/* Abaixo de 768px os 5 links + logo não cabem numa linha só (medido:
-   ~740px de conteúdo mínimo) — o nav vira um dropdown atrás do hambúrguer. */
+/* Abaixo de 768px os 5 links + logo não cabem numa linha só — o nav vira um
+   dropdown atrás do hambúrguer. Medição original de ~740px de conteúdo
+   mínimo ficou desatualizada depois que o link "Como funciona" virou
+   "Tutoriais e documentação" (mais longo); não remedido nesta sessão (sem
+   acesso a navegador), mas a margem até 768px deve seguir segura — vale
+   reconferir na validação visual pendente. */
 @media (max-width: 767px) {
   .nav-toggle {
     display: flex;
@@ -177,14 +181,47 @@ img {
 /* Main */
 
 main {
-  flex: 1;
-  /* Rede de segurança contra overflow horizontal (glow-blob com offset
-     negativo, ver GlowBackground.astro), do piso de 300px ao teto de
-     2560px+ (ver breakpoints em tokens.css). Vivia em html/body antes;
-     movida pra cá porque main é irmão do header na árvore (não ancestral),
-     então não interfere no position:sticky de .site-header (ver
-     comentário em html, acima). */
-  overflow-x: hidden;
+  /* flex-shrink:0 (não o "1" implícito de flex:1) — impede que main seja
+     comprimido abaixo do próprio conteúdo num body flex-column com
+     min-height:100vh (bug real encontrado numa página bem mais alta que
+     100vh, como-funciona.astro). Não depende de overflow pra funcionar,
+     então continua válido independente do que vem a seguir — mantido como
+     redundância barata. */
+  flex: 1 0 auto;
+  /* NUNCA declarar overflow aqui nem em .overflow-guard (nenhum valor além
+     de "visible", em nenhum eixo) — depois de 3 tentativas reais só com
+     overflow-x/overflow-y que não resolveram de vez, a causa raiz comum a
+     todas ficou clara: qualquer overflow non-visible num eixo força o
+     outro eixo computado a virar "auto" (CSS Overflow Module Level 3),
+     mesmo se esse outro eixo for escrito explicitamente como "visible" (a
+     regra olha o valor especificado, não se foi digitado à mão ou herdado
+     por omissão) — não existe combinação de overflow-x/overflow-y que
+     escape disso. E pior: assim que QUALQUER elemento no caminho até o
+     glow-blob (GlowBackground.astro, com offsets negativos deliberados pra
+     sangrar visualmente pra fora da section, ver comentário lá) ganha
+     overflow non-visible em qualquer eixo, o navegador passa a contar esse
+     sangramento no scrollHeight desse elemento — mesmo o blob não fazendo
+     parte do fluxo normal (position:absolute com offset negativo não
+     afeta a altura de layout do ancestral) — inflando scrollHeight acima
+     de clientHeight e criando um contexto de scroll de fato, mesmo num
+     bloco comum de altura auto (não só em item de flex, como se suspeitou
+     antes). Confirmado: nenhuma regra de height/min-height/max-height em
+     vh ou % afeta main ou .overflow-guard em nenhum arquivo do projeto — a
+     diferença medida (~40px) batia exatamente com o sangramento do blob,
+     não com altura externa forçada. Correção real: nunca usar overflow
+     pra clipar o glow-blob — ver .overflow-guard, abaixo, via clip-path. */
+}
+
+/* Recorta o vazamento horizontal do glow-blob (GlowBackground.astro) sem
+   usar overflow (ver comentário longo em main, acima, sobre por que
+   overflow nunca é seguro aqui). clip-path:inset(0) recorta visualmente
+   nas 4 bordas do elemento, mesmo efeito que overflow:hidden tinha pra
+   esse propósito específico, mas é só uma operação de pintura — não
+   participa do algoritmo de overflow/scroll do navegador, não força
+   nenhum eixo a virar "auto" e não conta o blob sangrando pra fora no
+   scrollHeight de ninguém. */
+.overflow-guard {
+  clip-path: inset(0);
 }
 
 .page-shell {
