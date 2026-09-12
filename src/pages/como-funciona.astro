@@ -2,183 +2,554 @@
 import Layout from "../layouts/Layout.astro";
 import GlowBackground from "../components/GlowBackground.astro";
 
-const flow = [
-  { label: "Celular / câmera IP", sub: "app Android ou RTSP", color: "var(--accent)" },
-  { label: "Hub", sub: "Windows / Linux, na sua casa", color: "var(--accent-soft)" },
-  { label: "Você", sub: "painel na rede local", color: "var(--info)" },
-];
+// Usado só pra gerar ids estáveis (a partir do título) pra cada tutorial e
+// entrada de documentação — consumidos pelo SectionRail.astro via
+// [data-rail-section]/[data-rail-title]/id (ver contrato documentado lá).
+function slugify(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-+|-+$)/g, "");
+}
 
-const steps = [
-  "Instale o Hub no computador que vai ficar ligado em casa.",
-  "Instale o app nos celulares antigos, ou aponte a câmera IP direto pro Hub.",
-  "Abra o painel do Hub na sua rede local e configure os cômodos.",
-  "Assista, grave e receba alertas, tudo sem sair da sua rede.",
-];
-
-// PLACEHOLDER: lista de câmeras compatíveis extraída do mockup, ainda não
-// confirmada como documento formal (ver CLAUDE.md, seção "Status exato").
-const compatible = [
+// Cada tutorial serve dois propósitos ao mesmo tempo: texto de ajuda pronto
+// pra publicar, e roteiro sequencial pro usuário gravar o GIF depois (daí os
+// passos serem sempre ações diretas, não explicações soltas). Fluxo
+// confirmado contra ../camguard-hub/docs/CLAUDE.md e os textos reais de UI
+// (arquivos .arb do Hub e do app de câmera) antes de escrever, não inventado.
+const tutorials = [
   {
-    title: "Android 6.0+",
-    desc: "Via app CamGuard Cam, instalado como APK.",
+    title: "Instalando o app de câmera no celular",
+    intro:
+      "O CamGuard Camera transforma um celular Android em câmera de segurança. Como ele ainda não está na Play Store, a instalação é feita direto pelo arquivo do aplicativo (APK).",
+    steps: [
+      "No celular que vai virar câmera, baixe o arquivo do CamGuard Camera pela página de Baixar do site.",
+      "Ao abrir o arquivo baixado, o Android avisa que a instalação está bloqueada. Toque em \"Configurações\" nesse aviso.",
+      "Ative a opção que permite instalar aplicativos dessa fonte (o nome muda um pouco entre versões do Android, algo como \"Instalar apps desconhecidos\").",
+      "Volte e abra o arquivo baixado de novo. Agora aparece o botão para instalar.",
+      "Toque em instalar e espere terminar. O ícone do CamGuard Camera aparece na tela normalmente, como qualquer outro app.",
+    ],
+    gif: "tela do celular mostrando o aviso de instalação bloqueada, a permissão sendo ativada nos Ajustes, e a instalação concluída.",
   },
   {
-    title: "Câmeras IP com RTSP",
-    desc: "Padrão ONVIF, a maioria das câmeras IP genéricas.",
+    title: "Pareando o celular com o Hub",
+    intro:
+      "Pareamento é o que conecta o celular, já com o CamGuard Camera instalado, ao Hub no computador. É feito uma vez só, por QR code, sem digitar nenhum endereço. Os dois aparelhos precisam estar na mesma rede Wi-Fi.",
+    steps: [
+      "No computador, abra o CamGuard Hub e vá até a tela de Câmeras.",
+      "Clique em \"Parear via QR\". Um QR code aparece na tela.",
+      "No celular, abra o CamGuard Camera e toque para escanear um QR code.",
+      "Aponte a câmera do celular pro QR code exibido no computador.",
+      "Pronto: a câmera aparece automaticamente na lista do Hub, já com o nome do modelo do celular.",
+    ],
+    gif: "tela do Hub com o QR code gerado ao lado da tela do celular escaneando, terminando com a câmera aparecendo pareada na lista.",
   },
   {
-    title: "Câmeras USB",
-    desc: "Webcams e capturadoras ligadas direto no Hub.",
+    title: "Adicionando uma câmera IP por descoberta automática",
+    intro:
+      "Se você tem uma câmera de segurança IP (não o celular), o Hub consegue encontrar ela sozinho na sua rede, usando os protocolos DVRIP ou ONVIF.",
+    steps: [
+      "Na tela de Câmeras do Hub, clique em \"Adicionar câmera\".",
+      "O Hub abre a busca automática e já começa a procurar câmeras na rede local.",
+      "Espere a busca terminar. Cada câmera encontrada aparece com um selo indicando o protocolo dela (DVRIP ou ONVIF).",
+      "Escolha a câmera encontrada e informe usuário e senha, se for pedido (os mesmos já usados no aplicativo original dela, se houver um).",
+      "Confirme para adicionar. Ela passa a aparecer na lista do Hub como qualquer outra câmera.",
+    ],
+    gif: "tela do Hub durante a busca automática, mostrando uma câmera encontrada com o selo de protocolo e o preenchimento de usuário/senha.",
+  },
+  {
+    title: "Adicionando uma câmera manualmente",
+    intro:
+      "Use esse caminho quando a busca automática não encontra sua câmera, ou quando você já sabe o endereço (URL) dela de outra fonte. Importante: isso não serve pra parear o celular com o CamGuard Camera, que é sempre feito por QR code (tutorial anterior).",
+    steps: [
+      "Na tela de Câmeras do Hub, clique em \"Adicionar câmera\".",
+      "Na tela de busca automática que abre, clique em \"Não encontrou sua câmera? Adicionar manualmente\".",
+      "Dê um nome pra câmera, por exemplo \"Portão da frente\".",
+      "Cole a URL de stream MJPEG ou RTSP dela no campo indicado.",
+      "Clique em \"Adicionar\". A câmera aparece na lista e, se a URL realmente responder, fica \"online\" em poucos segundos.",
+    ],
+    gif: "preenchimento do formulário de adicionar câmera manualmente (nome + URL) e a câmera aparecendo na lista logo depois.",
+  },
+  {
+    title: "Assistindo ao vivo",
+    intro:
+      "Tem dois jeitos de ver as câmeras ao vivo no Hub: o modo normal, com todas em miniatura lado a lado, e o Modo Hub, em tela cheia.",
+    steps: [
+      "Na tela de Câmeras, cada câmera cadastrada já mostra uma miniatura ao vivo. Clique numa pra abrir ela em destaque.",
+      "Para ver todas em tela cheia, clique no botão de Modo Hub no topo da tela de Câmeras.",
+      "No Modo Hub, uma câmera fica em destaque grande e as outras aparecem em miniatura numa fileira embaixo.",
+      "Clique numa miniatura pra trocar qual câmera fica em destaque.",
+      "Para sair do Modo Hub, aperte Esc ou clique no X no canto da tela.",
+    ],
+    gif: "abrindo uma câmera em destaque no modo normal, entrando no Modo Hub, trocando a câmera em destaque pelo carrossel de miniaturas e saindo com Esc.",
+  },
+  {
+    title: "Revendo gravações",
+    intro:
+      "Toda gravação por detecção de movimento fica guardada, organizada por câmera e por dia.",
+    steps: [
+      "Abra a aba Gravações no Hub.",
+      "Escolha a câmera que você quer rever no menu.",
+      "Escolha o dia no seletor de data.",
+      "A lista de gravações daquele dia aparece. Clique numa pra abrir o player.",
+      "Use os controles do player pra passar entre os clipes daquele dia.",
+    ],
+    gif: "selecionando câmera e data na aba Gravações, abrindo um clipe e navegando pelos controles do player.",
+  },
+  {
+    title: "Configurando notificações no Telegram",
+    intro:
+      "O Hub pode avisar direto no seu Telegram sempre que uma câmera detectar movimento. Antes de configurar no Hub, você precisa de duas informações que vêm do próprio Telegram: o token do seu bot e o seu Chat ID.",
+    steps: [
+      "No Telegram, crie um bot e copie o token dele (isso é feito dentro do próprio Telegram, fora do CamGuard).",
+      "Descubra o seu Chat ID, também pelo Telegram.",
+      "No Hub, abra Configurações e encontre o card \"Telegram\".",
+      "Ative a opção \"Notificações via Telegram\".",
+      "Cole o token do bot no campo \"Token do bot\" e o seu Chat ID no campo \"Chat ID\".",
+      "Clique em \"Testar\" pra confirmar que a mensagem chega no seu Telegram.",
+      "Clique em salvar.",
+    ],
+    gif: "preenchimento do card de Telegram nas Configurações do Hub, clicando em Testar e mostrando a mensagem chegando no celular.",
+  },
+  {
+    title: "Parando a transmissão de uma câmera pelo celular",
+    intro:
+      "Se quiser desligar uma câmera-celular sem perder o pareamento com o Hub, dá pra fazer isso direto pelo próprio CamGuard Camera, sem precisar forçar-parar pelo Android.",
+    steps: [
+      "Abra o CamGuard Camera no celular que está transmitindo.",
+      "No topo da tela, toque no ícone de parar, ao lado do indicador \"TRANSMITINDO\".",
+      "Confirme na caixa de diálogo que aparece.",
+      "O app encerra a transmissão por completo e fecha.",
+      "Quando quiser voltar a usar essa câmera, é só abrir o app de novo. Ele reconecta sozinho com o Hub, sem precisar escanear o QR code outra vez.",
+    ],
+    gif: "tocando no ícone de parar no app, confirmando a caixa de diálogo, e reabrindo o app depois mostrando que ele reconecta sozinho.",
+  },
+  {
+    title: "Renomeando ou removendo uma câmera",
+    intro:
+      "Cada câmera cadastrada pode ser renomeada ou removida a qualquer momento, direto no card dela na tela de Câmeras.",
+    steps: [
+      "Na tela de Câmeras do Hub, encontre o card da câmera que você quer alterar.",
+      "Para renomear, toque no ícone de lápis no card, digite o novo nome e confirme.",
+      "Para remover, toque no ícone de lixeira no card.",
+      "Confirme a remoção na caixa de diálogo que aparece.",
+      "A câmera some da lista, mas as gravações que ela já fez continuam salvas normalmente.",
+    ],
+    gif: "tocando no lápis pra renomear uma câmera, depois tocando na lixeira e confirmando a remoção de outra.",
+  },
+  {
+    title: "Configurando classificação de eventos por IA",
+    intro:
+      "A classificação por IA é um recurso opcional: quando ativada, cada evento de movimento é analisado por um provedor de IA usando a sua própria chave de API. Hoje o único provedor disponível é o Claude (da Anthropic); suporte a outros provedores está planejado, mas ainda não existe. Sem esse recurso ativado, a detecção de movimento e as gravações continuam funcionando normalmente.",
+    steps: [
+      "No Hub, abra Configurações e encontre o card \"Provedor de IA\".",
+      "Ative a opção \"Ativar classificação por IA\".",
+      "No campo \"Provedor\", deixe selecionado o Claude.",
+      "Cole sua própria chave de API do Claude no campo \"Chave de API\".",
+      "Clique em salvar.",
+    ],
+    gif: "ativando a classificação por IA nas Configurações do Hub e colando a chave de API no campo correspondente.",
+  },
+  {
+    title: "Ajustando retenção de gravações",
+    intro:
+      "A retenção controla até quando o Hub guarda gravações antigas antes de apagar automaticamente, por tempo ou por espaço em disco, o que vier primeiro. Vale pra todas as câmeras ao mesmo tempo.",
+    steps: [
+      "No Hub, abra Configurações e encontre o card \"Retenção de gravações\".",
+      "Defina o \"Tempo máximo (dias)\" que você quer guardar as gravações.",
+      "Defina o \"Espaço máximo por câmera (GB)\" que cada câmera pode ocupar em disco.",
+      "Clique em salvar.",
+      "A mudança pode levar até 30 segundos pra valer em câmeras já conectadas.",
+    ],
+    gif: "ajustando os campos de tempo e espaço no card de Retenção das Configurações e salvando.",
+  },
+  {
+    title: "Configurando o Hub para iniciar com o sistema",
+    intro:
+      "Pra não precisar abrir o Hub manualmente toda vez que ligar o computador, dá pra deixar ele configurado pra iniciar sozinho.",
+    steps: [
+      "No Hub, abra Configurações e encontre o card \"Preferências\".",
+      "Ative a opção \"Iniciar junto com o sistema\".",
+      "Pronto: da próxima vez que o computador ligar, o Hub abre sozinho.",
+    ],
+    gif: "ativando \"Iniciar junto com o sistema\" no card de Preferências das Configurações.",
+  },
+];
+
+// Aba "Documentação": conteúdo de referência (conceitual), não passo a passo
+// — por isso sem placeholder de GIF. Fatos confirmados contra
+// ../camguard-hub/docs/CLAUDE.md (e, pro mínimo real do Android, direto em
+// apps/camera/android/app/build.gradle.kts + no default do próprio Flutter
+// instalado, FlutterExtension.kt) antes de escrever, mesma disciplina da
+// aba de Tutoriais. `body` é HTML (não texto puro) só pra permitir os
+// links pontuais — conteúdo fixo escrito aqui, não vindo de usuário.
+const docs = [
+  {
+    title: "Hub vs. app de câmera: o que cada um faz",
+    body: "<p>O CamGuard Hub e o CamGuard Camera são dois aplicativos diferentes, com papéis diferentes. O Hub roda no computador que fica ligado em casa (Windows ou Linux): é ele que guarda as câmeras cadastradas, grava os clipes, detecta movimento, mostra o painel e envia notificações. O CamGuard Camera roda no celular e faz só uma coisa: transformar a câmera dele numa fonte de vídeo que o Hub consegue usar. Ele não grava, não detecta movimento e não tem painel próprio, isso tudo é trabalho do Hub. Só existe um Hub por casa, mas pode haver quantos celulares-câmera você quiser.</p>",
+  },
+  {
+    title: 'Câmera "pareada" vs. câmera "adicionada manualmente"',
+    body: '<p>Existem dois jeitos de cadastrar uma câmera no Hub, e eles não são a mesma coisa. Pareamento por QR code é o único caminho de verdade pro CamGuard Camera: o celular escaneia o código, se identifica sozinho e aparece marcado como "Pareado" dentro do próprio app. Adicionar manualmente por URL é um caminho genérico, pra qualquer câmera IP que fale MJPEG ou RTSP, independente do pareamento. Se você colar a URL do próprio CamGuard Camera nesse formulário manual, a câmera funciona normalmente no Hub, mas o app no celular continua mostrando "Não pareado". Isso é esperado, não é bug: o cadastro manual nunca passa pelo fluxo que marca o celular como pareado.</p>',
+  },
+  {
+    title: 'Por que uma câmera aparece "offline" às vezes',
+    body: "<p>Na maioria das vezes, isso se resolve sozinho. Se uma câmera para de responder, o Hub continua tentando reconectar; depois de algumas tentativas seguidas sem sucesso, ele verifica se o endereço dela mudou na rede (o que costuma acontecer depois de reiniciar o roteador) e atualiza sozinho, sem exigir nenhuma ação sua. Se uma câmera ficar offline por muito tempo mesmo assim, vale checar o básico: se é uma câmera IP, se ela está ligada e conectada na rede; se é um celular com o CamGuard Camera, se o app está aberto e transmitindo.</p>",
+  },
+  {
+    title: "O que fica local e o que sai da sua rede",
+    body: '<p>Por padrão, tudo roda dentro da sua própria rede: vídeo, gravações, detecção de movimento e o painel do Hub nunca saem de casa, não existe conta nem nuvem. As únicas exceções são recursos que você liga por conta própria: notificações no Telegram (que passam pelos servidores do Telegram) e classificação de eventos por IA (que envia a imagem do evento pro provedor de IA que você configurou, usando sua própria chave). Os detalhes completos ficam nos <a href="/privacidade">Termos de Uso e Privacidade</a>.</p>',
+  },
+  {
+    title: "Requisitos de sistema",
+    body: "<p>O Hub roda em Windows ou Linux, no computador que vai ficar ligado em casa. O CamGuard Camera exige Android 7.0 ou mais novo (a versão mínima é definida pela própria ferramenta usada pra compilar o app, então pode mudar em atualizações futuras).</p>",
+  },
+  {
+    title: "Tipos de câmera compatíveis",
+    body: "<p>Três fontes de vídeo funcionam com o Hub hoje: o próprio app CamGuard Camera (celular Android), câmeras IP genéricas que falam o protocolo DVRIP/Sofia, e câmeras com suporte a ONVIF. As duas últimas podem ser encontradas por busca automática na rede ou cadastradas manualmente por URL, se você já souber o endereço delas.</p>",
+  },
+  {
+    title: "O guia interativo dentro do Hub",
+    body: '<p>Além dos tutoriais desta página, o próprio Hub tem um guia interativo embutido. Um botão "?" aparece no cabeçalho de cada tela (Câmeras, Gravações, Logs, Consumo, Configurações e na barra lateral) e explica, na hora, os elementos daquela tela específica. Na primeira vez que você abre o Hub, uma versão desse guia toca automaticamente como boas-vindas; depois disso, é só clicar no "?" sempre que quiser rever alguma explicação.</p>',
+  },
+  {
+    title: "Cuidados com bateria em uso contínuo",
+    body: '<p>Usar um celular como câmera 24 horas por dia, sempre ligado no carregador, é diferente do uso normal que a bateria dele foi pensada pra aguentar. Isso é tratado com mais detalhe na seção de aviso dos <a href="/privacidade#bateria">Termos de Uso e Privacidade</a>.</p>',
+  },
+  {
+    title: "Resolvendo problemas comuns",
+    body: '<ul class="doc-list-simple"><li><strong>Câmera não conecta:</strong> confira se o celular e o computador estão na mesma rede Wi-Fi, e se o QR code usado pra parear não expirou (gere um novo direto no Hub). Pra câmeras IP adicionadas manualmente, confira usuário, senha e URL.</li><li><strong>Preview não carrega:</strong> confirme que a câmera não está marcada como offline (ver item acima); se for o CamGuard Camera, confirme que o app está aberto e transmitindo, e não foi parado pelo botão de parar transmissão.</li><li><strong>Nenhuma detecção de movimento sendo registrada:</strong> a detecção roda automaticamente assim que a câmera está online, sem nenhum ajuste manual necessário. Confirme que a câmera está mesmo online, e que o disco do computador não está cheio (nesse caso, a gravação pausa e você recebe um aviso, se as notificações estiverem configuradas).</li></ul>',
   },
 ];
 ---
 
-<Layout title="Como funciona">
+<Layout title="Tutoriais e documentação">
   <section class="page-shell container">
     <GlowBackground variant="section" />
-    <span class="eyebrow">COMO FUNCIONA</span>
-    <h1>Do celular na gaveta ao painel na sua tela</h1>
 
-    <div class="flow reveal">
-      <div class="flow-step">
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={flow[0].color} stroke-width="1.6">
-          <rect x="7" y="2" width="10" height="20" rx="2"></rect>
-          <line x1="10" y1="19" x2="14" y2="19"></line>
-        </svg>
-        <div class="flow-step__title">{flow[0].label}</div>
-        <div class="flow-step__sub">{flow[0].sub}</div>
+    <div class="tablist" role="tablist" aria-label="Conteúdo de Tutoriais e documentação">
+      <button
+        type="button"
+        id="tab-tutoriais"
+        class="tab is-active"
+        role="tab"
+        aria-selected="true"
+        aria-controls="panel-tutoriais"
+        tabindex="0"
+      >
+        Tutoriais
+      </button>
+      <button
+        type="button"
+        id="tab-documentacao"
+        class="tab"
+        role="tab"
+        aria-selected="false"
+        aria-controls="panel-documentacao"
+        tabindex="-1"
+      >
+        Documentação
+      </button>
+    </div>
+
+    <div id="panel-tutoriais" class="tabpanel" role="tabpanel" aria-labelledby="tab-tutoriais" tabindex="0">
+      <div class="tutorials-intro reveal">
+        <span class="eyebrow">PASSO A PASSO</span>
+        <h2>Tutoriais</h2>
+        <p>
+          Cada tutorial abaixo é ao mesmo tempo um guia rápido e o roteiro que
+          vai virar o GIF de demonstração correspondente, ainda por gravar.
+        </p>
       </div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-step flow-step--highlight">
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={flow[1].color} stroke-width="1.6">
-          <rect x="3" y="4" width="18" height="16" rx="2"></rect>
-          <line x1="7" y1="9" x2="13" y2="9"></line>
-          <line x1="7" y1="13" x2="11" y2="13"></line>
-          <circle cx="17" cy="13" r="1.2" fill={flow[1].color} stroke="none"></circle>
-        </svg>
-        <div class="flow-step__title" style={`color:${flow[1].color}`}>{flow[1].label}</div>
-        <div class="flow-step__sub">{flow[1].sub}</div>
-      </div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-step">
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={flow[2].color} stroke-width="1.6">
-          <circle cx="12" cy="8" r="3.2"></circle>
-          <path d="M5 20c0-4 3-6 7-6s7 2 7 6"></path>
-        </svg>
-        <div class="flow-step__title">{flow[2].label}</div>
-        <div class="flow-step__sub">{flow[2].sub}</div>
+
+      <div class="tutorial-list">
+        {
+          tutorials.map((tutorial, i) => (
+            <article
+              class="tutorial reveal"
+              id={`tutorial-${slugify(tutorial.title)}`}
+              data-rail-section
+              data-rail-title={tutorial.title}
+            >
+              <div class="tutorial__head">
+                <span class="tutorial__num">{String(i + 1).padStart(2, "0")}</span>
+                <h3>{tutorial.title}</h3>
+              </div>
+              <p class="tutorial__intro">{tutorial.intro}</p>
+              <ol class="steps">
+                {tutorial.steps.map((step, si) => (
+                  <li>
+                    <span class="steps__num">{si + 1}</span>
+                    <p>{step}</p>
+                  </li>
+                ))}
+              </ol>
+              <div class="tutorial-gif">
+                <div class="tutorial-gif__bar">
+                  <span class="tutorial-gif__label">Placeholder de GIF</span>
+                </div>
+                <div class="tutorial-gif__body">
+                  <span>GIF: {tutorial.gif}</span>
+                </div>
+              </div>
+            </article>
+          ))
+        }
       </div>
     </div>
 
-    <div class="columns reveal">
-      <div>
-        <h2>Pra começar</h2>
-        <ol class="steps">
-          {
-            steps.map((step, i) => (
-              <li>
-                <span class="steps__num">{i + 1}</span>
-                <p>{step}</p>
-              </li>
-            ))
-          }
-        </ol>
+    <div id="panel-documentacao" class="tabpanel" role="tabpanel" aria-labelledby="tab-documentacao" tabindex="0" hidden>
+      <div class="tutorials-intro reveal">
+        <span class="eyebrow">REFERÊNCIA</span>
+        <h2>Documentação</h2>
+        <p>
+          Conceitos e explicações rápidas sobre como o CamGuard funciona por
+          baixo do capô, sem passo a passo.
+        </p>
       </div>
-      <div>
-        <h2>Câmeras compatíveis</h2>
-        <!-- PLACEHOLDER: ver nota acima sobre esta lista. -->
-        <div class="compat-list">
-          {
-            compatible.map((item) => (
-              <div class="compat-item">
-                <span class="compat-dot">●</span>
-                <div>
-                  <div class="compat-item__title">{item.title}</div>
-                  <div class="compat-item__desc">{item.desc}</div>
-                </div>
-              </div>
-            ))
-          }
-        </div>
+
+      <div class="doc-list">
+        {
+          docs.map((doc) => (
+            <article
+              class="doc-entry reveal"
+              id={`doc-${slugify(doc.title)}`}
+              data-rail-section
+              data-rail-title={doc.title}
+            >
+              <h3>{doc.title}</h3>
+              <div class="doc-entry__body" set:html={doc.body} />
+            </article>
+          ))
+        }
       </div>
     </div>
   </section>
 </Layout>
 
+<script>
+  // Tabs Tutoriais/Documentação — padrão ARIA "tabs" com ativação
+  // automática (mover o foco pela seta já ativa a aba, não precisa de
+  // Enter/Espaço separado). Ao trocar de aba, rola a página de volta pro
+  // topo do tablist (não pro topo absoluto da página, que incluiria o
+  // diagrama/lista de compatibilidade acima, e não faz sentido reler toda
+  // vez) — offset calculado pela altura real do header sticky no momento
+  // do clique, não um valor fixo (o header é fluido via clamp()).
+  const tablist = document.querySelector<HTMLElement>('[role="tablist"]');
+
+  if (tablist) {
+    const tabs = Array.from(tablist.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+    const header = document.querySelector<HTMLElement>(".site-header");
+
+    function scrollTablistIntoView() {
+      const headerHeight = header ? header.offsetHeight : 0;
+      const top = tablist!.getBoundingClientRect().top + window.scrollY - headerHeight - 16;
+      window.scrollTo({ top: Math.max(top, 0) });
+    }
+
+    function activate(tab: HTMLButtonElement) {
+      tabs.forEach((t) => {
+        const selected = t === tab;
+        t.setAttribute("aria-selected", String(selected));
+        t.tabIndex = selected ? 0 : -1;
+        t.classList.toggle("is-active", selected);
+        const panel = document.getElementById(t.getAttribute("aria-controls") ?? "");
+        if (panel) panel.hidden = !selected;
+      });
+      tab.focus();
+      scrollTablistIntoView();
+      // Avisa o SectionRail (Layout.astro) que o conjunto de seções visíveis
+      // mudou — ele não sabe nada sobre abas, só refaz a lista de dots a
+      // partir de quem está com offsetParent !== null agora.
+      document.dispatchEvent(new CustomEvent("camguard:content-changed"));
+    }
+
+    tabs.forEach((tab, index) => {
+      tab.addEventListener("click", () => {
+        if (tab.getAttribute("aria-selected") !== "true") activate(tab);
+      });
+
+      tab.addEventListener("keydown", (event) => {
+        let targetIndex: number | null = null;
+        if (event.key === "ArrowRight") targetIndex = (index + 1) % tabs.length;
+        else if (event.key === "ArrowLeft") targetIndex = (index - 1 + tabs.length) % tabs.length;
+        else if (event.key === "Home") targetIndex = 0;
+        else if (event.key === "End") targetIndex = tabs.length - 1;
+
+        if (targetIndex !== null) {
+          event.preventDefault();
+          activate(tabs[targetIndex]);
+        }
+      });
+    });
+  }
+</script>
+
 <style>
-  .flow {
+  /* Tabs — só texto, estado ativo indicado por cor + sublinhado (sem ícone,
+     sem cor fora da paleta do site). Não precisa de overflow-x/scroll: dois
+     rótulos curtos sempre cabem, mesmo no piso de 300px. */
+  .tablist {
     display: flex;
-    align-items: center;
-    gap: 0;
-    margin-bottom: 64px;
-    flex-wrap: wrap;
+    gap: clamp(20px, 4vw, 32px);
+    border-bottom: 1px solid rgba(243, 221, 209, 0.1);
+    margin-bottom: clamp(32px, 6vw, 48px);
   }
 
-  .flow-step {
-    flex: 1;
-    /* min() em vez de min-width fixo: nunca exige mais que 100% do
-       container, então não força overflow nem no piso de 300px. */
-    min-width: min(160px, 100%);
-    background: var(--bg-card);
-    border: 1px solid rgba(243, 221, 209, 0.08);
-    border-radius: var(--radius-lg);
-    padding: 22px;
-    text-align: center;
-  }
-
-  .flow-step--highlight {
-    border-color: var(--accent);
-  }
-
-  .flow-step svg {
-    margin-bottom: 10px;
-  }
-
-  .flow-step__title {
+  .tab {
+    appearance: none;
+    background: none;
+    border: none;
+    padding: 4px 2px 14px;
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(14px, 2.2vw, 16px);
     font-weight: 600;
-    font-size: 15px;
-  }
-
-  .flow-step__sub {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--text-muted);
-    margin-top: 4px;
-  }
-
-  .flow-arrow {
-    flex: 0 0 60px;
-    text-align: center;
     color: var(--text-tertiary);
-    font-size: 22px;
+    cursor: pointer;
+    position: relative;
+    transition: color var(--duration-fast) var(--ease-standard);
   }
 
-  .columns {
-    display: grid;
-    /* auto-fit + minmax: reorganiza sozinho pra 1 coluna em telas estreitas,
-       sem precisar de um breakpoint manual. min(240px,100%) garante que a
-       coluna nunca exija mais largura do que o container tem (protege o
-       piso de 300px). */
-    grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
-    gap: clamp(28px, 6vw, 56px);
+  .tab:hover {
+    color: var(--text-primary);
   }
 
-  .columns h2 {
-    font-size: 18px;
+  .tab:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: var(--radius-sm);
+  }
+
+  .tab.is-active {
+    color: var(--text-primary);
+  }
+
+  .tab.is-active::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 2px;
+    background: var(--accent);
+    border-radius: var(--radius-sm);
+  }
+
+  .tutorials-intro {
+    margin-bottom: clamp(28px, 5vw, 40px);
+  }
+
+  .tutorials-intro h2 {
+    font-size: clamp(20px, 4vw, 26px);
+    margin: 0 0 12px;
+  }
+
+  .tutorials-intro p {
+    color: var(--text-secondary);
+    line-height: 1.6;
+    max-width: 60ch;
+  }
+
+  .tutorial-list,
+  .doc-list {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(40px, 7vw, 56px);
+  }
+
+  .tutorial,
+  .doc-entry {
+    padding-top: clamp(28px, 5vw, 40px);
+    border-top: 1px solid rgba(243, 221, 209, 0.08);
+  }
+
+  .tutorial:first-child,
+  .doc-entry:first-child {
+    padding-top: 0;
+    border-top: none;
+  }
+
+  .tutorial__head {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  .tutorial__num {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--accent);
+    flex: none;
+  }
+
+  .tutorial__head h3,
+  .doc-entry h3 {
+    font-size: clamp(16px, 3vw, 19px);
     font-weight: 600;
+    margin: 0;
+  }
+
+  .doc-entry h3 {
+    margin-bottom: 14px;
+  }
+
+  .tutorial__intro {
+    color: var(--text-secondary);
+    font-size: 14.5px;
+    line-height: 1.6;
     margin: 0 0 20px;
+    max-width: 68ch;
+  }
+
+  .doc-entry__body {
+    color: var(--text-secondary);
+    font-size: 14.5px;
+    line-height: 1.6;
+    max-width: 68ch;
+  }
+
+  .doc-entry__body :global(p) {
+    margin: 0 0 14px;
+  }
+
+  .doc-entry__body :global(p:last-child) {
+    margin-bottom: 0;
+  }
+
+  .doc-entry__body :global(a) {
+    color: var(--accent-soft);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .doc-entry__body :global(.doc-list-simple) {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .doc-entry__body :global(.doc-list-simple strong) {
+    color: var(--text-primary);
   }
 
   .steps {
     list-style: none;
-    margin: 0;
+    margin: 0 0 24px;
     padding: 0;
+    max-width: 68ch;
   }
 
   .steps li {
     display: flex;
     gap: 14px;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
   }
 
   .steps__num {
@@ -204,54 +575,61 @@ const compatible = [
     padding-top: 3px;
   }
 
-  .compat-list {
+  /* Mesma linguagem visual do placeholder de screenshot em index.astro
+     (.mock-window): barra com rótulo mono + corpo listrado com aspect-ratio
+     reservado. Não é decoração genérica de janela, é reserva de espaço pro
+     GIF real que o usuário grava depois. overflow:hidden aqui é seguro (não
+     é o bug de overflow-x sozinho documentado no CLAUDE.md): os dois eixos
+     são declarados hidden pelo mesmo shorthand, e a caixa tem aspect-ratio
+     fixo, sem altura em vh/% nem item de flex — nunca vira scroll container. */
+  .tutorial-gif {
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid rgba(243, 221, 209, 0.1);
+  }
+
+  .tutorial-gif__bar {
+    background: var(--bg-titlebar);
+    padding: 10px 16px;
     display: flex;
-    flex-direction: column;
-    gap: 18px;
+    align-items: center;
   }
 
-  .compat-item {
+  .tutorial-gif__label {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .tutorial-gif__body {
+    background: repeating-linear-gradient(
+      135deg,
+      var(--bg-input),
+      var(--bg-input) 12px,
+      var(--bg-card) 12px,
+      var(--bg-card) 24px
+    );
+    aspect-ratio: 16 / 9;
     display: flex;
-    gap: 12px;
-    align-items: flex-start;
-    background: var(--bg-input);
-    border-radius: var(--radius-md);
-    padding: 14px 16px;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    text-align: center;
   }
 
-  .compat-dot {
-    color: var(--info);
-    font-size: 14px;
-    flex: none;
-    margin-top: 1px;
-  }
-
-  .compat-item__title {
-    font-size: 14.5px;
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-
-  .compat-item__desc {
+  .tutorial-gif__body span {
+    font-family: var(--font-mono);
     font-size: 13px;
     color: var(--text-muted);
-    margin-top: 2px;
+    max-width: 46ch;
   }
 
-  /* Abaixo de 600px o fluxo de 3 caixas empilha em coluna — mais legível
-     que 3 caixas de min-width:160px espremidas lado a lado. */
-  @media (max-width: 599px) {
-    .flow {
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .flow-step {
-      width: 100%;
-    }
-
-    .flow-arrow {
-      transform: rotate(90deg);
+  /* Mesmo ajuste do placeholder de index.astro: em telas muito estreitas,
+     16:9 fica baixo demais pro texto do placeholder quebrar sem cortar. */
+  @media (max-width: 479px) {
+    .tutorial-gif__body {
+      aspect-ratio: auto;
+      min-height: 160px;
     }
   }
 </style>
