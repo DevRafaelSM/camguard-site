@@ -1,0 +1,517 @@
+---
+// Navegação lateral tipo "scroll spy" (bolinhas verticais no desktop,
+// botão flutuante + lista no mobile/tablet). Compartilhado via Layout.astro
+// (renderizado como irmão de <main>, fora de .overflow-guard — de propósito,
+// ver comentário abaixo) e ativado sozinho em qualquer página que tenha
+// elementos marcados com [data-rail-section] (hoje só como-funciona.astro).
+// Páginas sem esses elementos não renderizam nada visível.
+//
+// Contrato com a página anfitriã: cada seção rastreável precisa de um
+// `id` único + `data-rail-section` (marcador) + `data-rail-title` (rótulo
+// legível, evita depender do texto do heading que pode ter outros elementos
+// junto, tipo o número do tutorial). Se a página esconder/mostrar grupos de
+// seções dinamicamente (ex. abas), ela deve disparar
+// `document.dispatchEvent(new CustomEvent("camguard:content-changed"))`
+// depois de mudar o que está visível — o rail refaz a lista sozinho,
+// filtrando por `offsetParent !== null` (não sabe nada sobre abas
+// especificamente, só reage a "algo mudou, quais seções estão visíveis
+// agora").
+//
+// DECISÃO TÉCNICA: renderizado fora de .overflow-guard porque esse elemento
+// tem clip-path (ver global.css) — mesmo clip-path não estando na lista
+// tradicional de propriedades que viram containing block pra descendente
+// fixed (transform/perspective/filter/backdrop-filter/will-change/contain),
+// depois da sessão inteira gasta com efeitos colaterais não óbvios de
+// overflow/clip nesta árvore, não vale o risco de assumir isso sem
+// necessidade: manter o rail (position:fixed) como irmão de <main>, nunca
+// descendente de nada com clip-path/transform/filter, elimina a dúvida de
+// vez.
+---
+
+<nav class="section-rail" id="section-rail-desktop" aria-label="Seções desta aba" hidden></nav>
+
+<button
+  type="button"
+  id="section-rail-toggle"
+  class="rail-toggle"
+  aria-expanded="false"
+  aria-controls="section-rail-sheet"
+  aria-label="Abrir índice de seções"
+  hidden
+>
+  <span id="rail-toggle-text"></span>
+</button>
+
+<nav id="section-rail-sheet" class="rail-sheet" aria-label="Seções desta aba" hidden></nav>
+
+<script>
+  // Ver contrato completo no comentário do frontmatter acima.
+  (function () {
+    const desktopRail = document.getElementById("section-rail-desktop");
+    const mobileToggle = document.getElementById("section-rail-toggle");
+    const mobileSheet = document.getElementById("section-rail-sheet");
+    const toggleText = document.getElementById("rail-toggle-text");
+    if (!desktopRail || !mobileToggle || !mobileSheet || !toggleText) return;
+
+    let sections: HTMLElement[] = [];
+
+    // Mesma referência usada em dois lugares: o alvo pra onde a gente rola
+    // ao clicar (scrollToSection) e a "linha" que decide qual seção está
+    // ativa (computeActiveIndex) — faz sentido serem o mesmo número: uma
+    // seção só devia contar como "ativa" depois de ter sido rolada até
+    // exatamente esse ponto.
+    const REFERENCE_OFFSET = 16;
+
+    function headerHeight(): number {
+      const header = document.querySelector<HTMLElement>(".site-header");
+      return header ? header.offsetHeight : 0;
+    }
+
+    function scrollToSection(section: HTMLElement) {
+      const top = section.getBoundingClientRect().top + window.scrollY - headerHeight() - REFERENCE_OFFSET;
+      window.scrollTo({ top: Math.max(top, 0) });
+    }
+
+    // Critério de seção ativa: a ÚLTIMA cujo topo já passou da linha de
+    // referência (logo abaixo do header fixo) — não a que ocupa mais área
+    // visível na tela (bug real medido: no carregamento, com scrollY 0, a
+    // primeira seção era marcada ativa mesmo com o título dela ainda a
+    // ~400px do topo, só por ocupar mais espaço vertical que o pouco que
+    // sobra visível de "PASSO A PASSO"/título/parágrafo acima dela). Se
+    // NENHUMA seção ainda cruzou a linha (still no topo da página, antes do
+    // título da 1ª seção chegar lá), o retorno é null — nenhum dot deve
+    // aparecer ativo nesse momento, isso é o comportamento correto, não uma
+    // omissão a corrigir. `sections` está em ordem de documento (mesma
+    // ordem visual), por isso o scan pode parar no primeiro que ainda não
+    // cruzou a linha.
+    // Caso especial conhecido de scroll-spy: se a última seção da lista for
+    // curta (ex. aba Documentação, entradas sem GIF, bem mais baixas que os
+    // tutoriais), pode não sobrar página suficiente abaixo dela pro título
+    // dela cruzar a referenceLine — o documento bate no scroll máximo antes
+    // disso. Medido de verdade (Playwright): na aba Documentação, o topo do
+    // último item ("Resolvendo problemas comuns") fica em ~518px mesmo no
+    // fundo absoluto da página (scrollY = scrollHeight - innerHeight), bem
+    // acima do limiar de 107px — nunca cruza, então o critério normal nunca
+    // ativa o último item, mesmo com o usuário já no fim de tudo (o
+    // destaque ficava preso no penúltimo, "O guia interativo dentro do
+    // Hub"). Sem isso, essa classe de bug reaparece toda vez que o último
+    // item da lista atual for curto o bastante — por isso o tratamento é
+    // genérico (não hardcoded pro caso da Documentação), baseado em "o
+    // documento já bateu no fim", não no conteúdo de nenhuma seção
+    // específica.
+    function isDocumentScrolledToBottom(): boolean {
+      return window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
+    }
+
+    function computeActiveIndex(): number | null {
+      if (sections.length > 0 && isDocumentScrolledToBottom()) {
+        return sections.length - 1;
+      }
+
+      const referenceLine = headerHeight() + REFERENCE_OFFSET;
+      let active: number | null = null;
+      for (let i = 0; i < sections.length; i++) {
+        if (sections[i].getBoundingClientRect().top <= referenceLine) {
+          active = i;
+        } else {
+          break;
+        }
+      }
+      return active;
+    }
+
+    function openSheet() {
+      mobileSheet!.hidden = false;
+      // Reflow forçado antes de adicionar a classe, senão o navegador
+      // colapsa a transição (hidden->visible e opacity 0->1 no mesmo frame).
+      void mobileSheet!.offsetWidth;
+      mobileSheet!.classList.add("is-open");
+      mobileToggle!.setAttribute("aria-expanded", "true");
+    }
+
+    function closeSheet() {
+      mobileSheet!.classList.remove("is-open");
+      mobileToggle!.setAttribute("aria-expanded", "false");
+      window.setTimeout(() => {
+        if (!mobileSheet!.classList.contains("is-open")) mobileSheet!.hidden = true;
+      }, 260);
+    }
+
+    mobileToggle.addEventListener("click", () => {
+      const isOpen = mobileToggle.getAttribute("aria-expanded") === "true";
+      if (isOpen) closeSheet();
+      else openSheet();
+    });
+
+    // index null = nenhuma seção ativa ainda (o usuário não rolou o
+    // suficiente pra cruzar a linha de referência da primeira seção).
+    function setActive(index: number | null) {
+      desktopRail!
+        .querySelectorAll(".rail-dot-link")
+        .forEach((link, i) => link.classList.toggle("is-active", i === index));
+      mobileSheet!
+        .querySelectorAll(".rail-sheet-link")
+        .forEach((link, i) => link.classList.toggle("is-active", i === index));
+      toggleText!.textContent = index === null ? `–/${sections.length}` : `${index + 1}/${sections.length}`;
+    }
+
+    function updateActive() {
+      if (sections.length === 0) return;
+      setActive(computeActiveIndex());
+    }
+
+    // Scroll + rAF, não IntersectionObserver: a decisão de qual seção está
+    // ativa depende só da posição do topo relativa à linha de referência
+    // (computeActiveIndex acima), então um listener de scroll throttled por
+    // frame é mais direto e confiável aqui do que tentar fazer o
+    // IntersectionObserver (pensado pra "área visível", não "cruzou uma
+    // linha") imitar esse critério via rootMargin/threshold.
+    let scrollTicking = false;
+    function onScrollOrResize() {
+      if (scrollTicking) return;
+      scrollTicking = true;
+      requestAnimationFrame(() => {
+        updateActive();
+        scrollTicking = false;
+      });
+    }
+    window.addEventListener("scroll", onScrollOrResize, { passive: true });
+    window.addEventListener("resize", onScrollOrResize, { passive: true });
+
+    function buildRail() {
+      sections = Array.from(
+        document.querySelectorAll<HTMLElement>("[data-rail-section]"),
+      ).filter((el) => el.offsetParent !== null);
+
+      desktopRail!.innerHTML = "";
+      mobileSheet!.innerHTML = "";
+      closeSheet();
+
+      if (sections.length === 0) {
+        desktopRail!.hidden = true;
+        mobileToggle!.hidden = true;
+        mobileSheet!.hidden = true;
+        return;
+      }
+
+      desktopRail!.hidden = false;
+      mobileToggle!.hidden = false;
+
+      sections.forEach((section) => {
+        const title = section.dataset.railTitle || section.id;
+
+        const item = document.createElement("div");
+        item.className = "rail-item";
+
+        const link = document.createElement("a");
+        link.href = `#${section.id}`;
+        link.className = "rail-dot-link";
+        link.setAttribute("aria-label", title);
+
+        const dot = document.createElement("span");
+        dot.className = "rail-dot";
+        dot.setAttribute("aria-hidden", "true");
+
+        const label = document.createElement("span");
+        label.className = "rail-label";
+        label.setAttribute("aria-hidden", "true");
+        label.textContent = title;
+
+        link.append(dot, label);
+        link.addEventListener("click", (event) => {
+          event.preventDefault();
+          scrollToSection(section);
+          // Chamada explícita, não só confiar no listener de scroll: o
+          // scroll disparado por scrollToSection já é instantâneo (sem
+          // smooth), mas o caso especial de "documento bateu no fim" (ver
+          // isDocumentScrolledToBottom) precisa refletir na hora, sem
+          // esperar o próximo frame do throttle de scroll.
+          updateActive();
+        });
+        item.append(link);
+        desktopRail!.append(item);
+
+        const sheetLink = document.createElement("a");
+        sheetLink.href = `#${section.id}`;
+        sheetLink.className = "rail-sheet-link";
+        sheetLink.textContent = title;
+        sheetLink.addEventListener("click", (event) => {
+          event.preventDefault();
+          closeSheet();
+          scrollToSection(section);
+          updateActive();
+        });
+        mobileSheet!.append(sheetLink);
+      });
+
+      updateActive();
+    }
+
+    document.addEventListener("camguard:content-changed", buildRail);
+    buildRail();
+  })();
+</script>
+
+<style>
+  /* Desktop: coluna de dots fixa, centralizada verticalmente. Some abaixo
+     de 1440px (não o 1200-1280px cogitado inicialmente): nesta largura o
+     container de 1100px + padding-inline ainda deixa margem real dos dois
+     lados (~130px em 1440px) pra caber a coluna sem sobrepor conteúdo; em
+     1200-1280px essa margem cai pra ~10-50px, apertado demais — 1440px já é
+     um breakpoint documentado em tokens.css, preferido a inventar um novo
+     número só pra isso. */
+  /* Largura reservada fixa (o "hit-area" do hover em grupo): tanto o
+     estado recolhido quanto o expandido vivem dentro dela, só o que muda é
+     a largura de cada .rail-dot-link lá dentro (ver abaixo) — o container
+     em si não anima tamanho, então não há reflow de layout ao expandir. */
+  .section-rail {
+    position: fixed;
+    right: clamp(14px, 2vw, 28px);
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 30;
+    width: min(240px, 32vw);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+  }
+
+  @media (max-width: 1439px) {
+    .section-rail {
+      display: none;
+    }
+  }
+
+  /* :global() em TODAS as classes abaixo que só existem em elementos criados
+     via document.createElement() no <script> (.rail-item, .rail-dot-link,
+     .rail-dot, .rail-label, .rail-sheet-link) — causa raiz real de um bug
+     medido no navegador (Playwright + getComputedStyle), não suposição: o
+     Astro só injeta o atributo de escopo (data-astro-cid-*) em elementos
+     presentes no template estático do componente. Elementos criados em
+     runtime por JS nunca recebem esse atributo, então qualquer seletor
+     escopado (o padrão de todo <style> do Astro) simplesmente NUNCA batia
+     com eles — não dava erro nenhum, só silenciosamente não aplicava nada,
+     e os <a> caíam no default do navegador (display:inline, width:auto,
+     white-space:normal), exatamente o "texto solto desalinhado" relatado.
+     .section-rail/.rail-toggle/.rail-sheet CONTINUAM escopados normalmente
+     (sem :global) porque esses três são escritos direto no template acima,
+     recebem o atributo de escopo de verdade e nunca tiveram esse problema. */
+  :global(.rail-item) {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  /* Recolhido: só a largura de um dot (28px, cabe o círculo de 8px + o
+     espaço que ele já tinha) com fundo transparente — "exatamente como já
+     está hoje" nesse estado. overflow:hidden nos dois eixos (shorthand,
+     nunca um eixo só) clipa o rótulo, que já está totalmente pronto/na
+     largura natural dele por dentro, só escondido — é isso que permite a
+     expansão do grupo animar largura (não opacity individual) sem precisar
+     animar o texto separadamente. */
+  :global(.rail-dot-link) {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 32px;
+    width: 28px;
+    padding: 0 10px;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: transparent;
+    transition:
+      width var(--duration-base) var(--ease-standard),
+      background-color var(--duration-base) var(--ease-standard);
+  }
+
+  /* Expansão em GRUPO: o hover/focus é escutado no container inteiro
+     (.section-rail, esse sim escopado/estático), não no link individual —
+     passar o mouse em qualquer ponto da coluna (ou tabular até qualquer
+     dot) expande TODOS os itens ao mesmo tempo, como um conjunto só, não
+     um de cada vez. */
+  .section-rail:hover :global(.rail-dot-link),
+  .section-rail:focus-within :global(.rail-dot-link) {
+    width: 100%;
+    background: rgba(243, 221, 209, 0.04);
+  }
+
+  /* "Você está aqui": destaque sutil de fundo (não accent forte) na seção
+     em vista no momento — só faz sentido visualmente com o grupo expandido
+     (recolhido não tem retângulo pra tingir). */
+  .section-rail:hover :global(.rail-dot-link.is-active),
+  .section-rail:focus-within :global(.rail-dot-link.is-active) {
+    background: rgba(243, 221, 209, 0.09);
+  }
+
+  /* Hover/foco num item específico já expandido: destaque adicional, mais
+     claro ainda que o "você está aqui" — declarado depois da regra de
+     .is-active de propósito (mesma especificidade; a ordem no arquivo
+     decide o empate, e o hover individual precisa sempre vencer). */
+  .section-rail:hover :global(.rail-dot-link):hover,
+  .section-rail:hover :global(.rail-dot-link):focus-visible,
+  .section-rail:focus-within :global(.rail-dot-link):focus-visible {
+    background: rgba(243, 221, 209, 0.14);
+  }
+
+  :global(.rail-dot) {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-faint);
+    transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      transform var(--duration-fast) var(--ease-standard);
+  }
+
+  :global(.rail-dot-link.is-active .rail-dot) {
+    background: var(--accent);
+    transform: scale(1.35);
+  }
+
+  /* Título completo, revelado por opacidade (a largura de verdade quem dá
+     é o .rail-dot-link acima, isto aqui só evita o texto "aparecer pronto"
+     um instante antes do retângulo terminar de abrir). */
+  /* flex:1 + min-width:0 (não flex:none) de propósito: sem min-width:0, um
+     flex item nunca encolhe abaixo da largura intrínseca do próprio
+     conteúdo (aqui, o texto inteiro em nowrap) — o overflow/ellipsis abaixo
+     simplesmente não tinha efeito nenhum antes disso, o corte acontecia só
+     no .rail-dot-link (pai), no meio de uma letra, sem "…" nenhum. Com
+     min-width:0, o rótulo pode ficar menor que o texto, e text-overflow
+     finalmente tem o que fazer. */
+  :global(.rail-label) {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity var(--duration-fast) var(--ease-standard);
+  }
+
+  .section-rail:hover :global(.rail-label),
+  .section-rail:focus-within :global(.rail-label) {
+    opacity: 1;
+  }
+
+  :global(.rail-dot-link):focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* Mobile/tablet: botão flutuante circular (mostra "N/total" em texto, sem
+     ícone) + lista completa num painel que abre por cima, mesmo padrão de
+     transição (opacity+transform+visibility) já usado no dropdown mobile do
+     header (site-nav em Layout.astro) — não literalmente a mesma regra CSS
+     (estilos de componente Astro são isolados por padrão), mas os mesmos
+     tokens e a mesma técnica. */
+  .rail-toggle {
+    position: fixed;
+    right: clamp(16px, 5vw, 28px);
+    bottom: clamp(16px, 5vw, 28px);
+    z-index: 30;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid rgba(243, 221, 209, 0.15);
+    background: var(--bg-titlebar);
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .rail-toggle:hover {
+    color: var(--text-primary);
+  }
+
+  .rail-toggle:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  @media (min-width: 1440px) {
+    .rail-toggle {
+      display: none;
+    }
+  }
+
+  .rail-sheet {
+    position: fixed;
+    right: clamp(16px, 5vw, 28px);
+    bottom: calc(44px + clamp(16px, 5vw, 28px) + 10px);
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 220px;
+    max-width: min(320px, calc(100vw - 32px));
+    max-height: min(60vh, 420px);
+    background: var(--bg-titlebar);
+    border: 1px solid rgba(243, 221, 209, 0.1);
+    border-radius: var(--radius-lg);
+    padding: 8px;
+
+    /* overflow-y:auto DE PROPÓSITO aqui, com overflow-x declarado junto
+       (nunca um eixo sozinho) — max-height é fixo em px/min(), não vh
+       herdado de layout de flex, então isso não é o bug documentado no
+       CLAUDE.md (overflow-x sozinho promovendo overflow-y a auto sobre um
+       item de flex/bloco sem altura própria). Aqui o scroll é realmente
+       desejado: a lista pode ter mais itens do que cabem no painel. */
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    opacity: 0;
+    transform: translateY(8px);
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity var(--duration-base) var(--ease-standard),
+      transform var(--duration-base) var(--ease-standard),
+      visibility var(--duration-base) var(--ease-standard);
+  }
+
+  .rail-sheet.is-open {
+    opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  /* Mesmo motivo do bloco :global() acima: .rail-sheet-link também é criado
+     via document.createElement() no script, nunca recebe o atributo de
+     escopo do Astro. */
+  :global(.rail-sheet-link) {
+    display: block;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    font-size: 13.5px;
+    color: var(--text-tertiary);
+    transition:
+      color var(--duration-fast) var(--ease-standard),
+      background-color var(--duration-fast) var(--ease-standard);
+  }
+
+  :global(.rail-sheet-link):hover {
+    color: var(--text-primary);
+    background: var(--bg-input);
+  }
+
+  :global(.rail-sheet-link):focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    color: var(--text-primary);
+  }
+
+  :global(.rail-sheet-link.is-active) {
+    color: var(--accent-soft);
+  }
+</style>
